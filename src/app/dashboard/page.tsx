@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   AnalysisMode,
   AssignmentAnalysis,
   CourseInfo,
   DeadlineItem,
+  DashboardTab,
   ItemType,
   StudyWeek,
 } from "@/lib/types";
@@ -15,6 +16,7 @@ import DeadlineCard from "@/components/dashboard/DeadlineCard";
 import StudyWeekCard from "@/components/dashboard/StudyWeekCard";
 import AssignmentResultView from "@/components/dashboard/AssignmentResultView";
 import UpgradeModal, { LockedFeatureCard } from "@/components/dashboard/UpgradeModal";
+import PracticeTestMode from "@/components/dashboard/PracticeTestMode";
 
 // ─── Sample content ────────────────────────────────────────────────────────────
 
@@ -73,35 +75,61 @@ const groupConfig: Record<ItemType, { title: string }> = {
 
 // ─── Mode Toggle ───────────────────────────────────────────────────────────────
 
+const TAB_CONFIG: {
+  value: DashboardTab;
+  label: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    value: "syllabus",
+    label: "Syllabus",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+      </svg>
+    ),
+  },
+  {
+    value: "assignment",
+    label: "Assignment",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+      </svg>
+    ),
+  },
+  {
+    value: "practice",
+    label: "Practice Test",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+    ),
+  },
+];
+
 function ModeToggle({
-  mode,
+  tab,
   onChange,
 }: {
-  mode: AnalysisMode;
-  onChange: (m: AnalysisMode) => void;
+  tab: DashboardTab;
+  onChange: (t: DashboardTab) => void;
 }) {
   return (
     <div className="inline-flex rounded-xl border border-gray-200 bg-gray-100 p-1">
-      {(["syllabus", "assignment"] as AnalysisMode[]).map((m) => (
+      {TAB_CONFIG.map(({ value, label, icon }) => (
         <button
-          key={m}
-          onClick={() => onChange(m)}
+          key={value}
+          onClick={() => onChange(value)}
           className={`relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
-            mode === m
+            tab === value
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          {m === "syllabus" ? (
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-            </svg>
-          ) : (
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-            </svg>
-          )}
-          {m === "syllabus" ? "Syllabus" : "Assignment"}
+          {icon}
+          {label}
         </button>
       ))}
     </div>
@@ -136,6 +164,46 @@ function InputCard({
   onUpgradeClick: () => void;
 }) {
   const isSyllabus = mode === "syllabus";
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    setFileError(null);
+    setFileName(file.name);
+
+    if (ext === "txt") {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result;
+        if (typeof result === "string") {
+          onChange(result);
+        }
+      };
+      reader.onerror = () => {
+        setFileError("Could not read the file. Please try again or paste the text directly.");
+        setFileName(null);
+      };
+      reader.readAsText(file);
+    } else if (ext === "pdf") {
+      setFileError("PDF files can't be parsed automatically. Please copy and paste the text directly.");
+      setFileName(null);
+    } else if (ext === "doc" || ext === "docx") {
+      setFileError("Word documents can't be parsed automatically. Please copy and paste the text directly.");
+      setFileName(null);
+    } else {
+      setFileError("Unsupported file type. Please upload a .txt file or paste your text.");
+      setFileName(null);
+    }
+
+    // Reset input so the same file can be re-selected
+    e.target.value = "";
+  }
+
+  const fileLoaded = fileName !== null && fileError === null;
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -151,6 +219,33 @@ function InputCard({
         className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm leading-relaxed text-gray-700 placeholder-gray-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
       />
 
+      {/* File feedback */}
+      {fileLoaded && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+          <svg className="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          </svg>
+          <span className="flex-1 truncate text-xs font-medium text-emerald-700">{fileName}</span>
+          <button
+            onClick={() => { setFileName(null); onChange(""); }}
+            className="shrink-0 text-emerald-500 hover:text-emerald-700 transition-colors"
+            aria-label="Remove file"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+      {fileError && (
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+          <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+          <span className="text-xs text-amber-800">{fileError}</span>
+        </div>
+      )}
+
       {error && (
         <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
@@ -158,13 +253,17 @@ function InputCard({
       )}
 
       <div className="mt-4 flex items-center gap-3">
-        {/* File upload (UI only) */}
-        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors whitespace-nowrap">
-          <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        {/* File upload */}
+        <label className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
+          fileLoaded
+            ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+            : "border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+        }`}>
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
           </svg>
-          Upload file
-          <input type="file" className="hidden" accept=".pdf,.doc,.docx,.txt" />
+          {fileLoaded ? "Change file" : "Upload file"}
+          <input type="file" className="hidden" accept=".txt,.pdf,.doc,.docx" onChange={handleFileChange} />
         </label>
 
         {canAnalyze ? (
@@ -248,8 +347,42 @@ function InputCard({
 export default function DashboardPage() {
   const { isPro, upgradeToPro, canAnalyze, remainingFree, recordAnalysis } = usePro();
   const [showModal, setShowModal] = useState(false);
+  const [checkoutBanner, setCheckoutBanner] = useState<"success" | "cancel" | null>(null);
 
-  const [mode, setMode] = useState<AnalysisMode>("syllabus");
+  // Handle Stripe return — runs once on mount, reads URL params client-side
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get("checkout");
+    const sessionId = params.get("session_id");
+
+    if (!checkout) return;
+
+    // Clean the URL immediately so refreshing doesn't retrigger
+    window.history.replaceState({}, "", "/dashboard");
+
+    if (checkout === "cancel") {
+      setCheckoutBanner("cancel");
+      return;
+    }
+
+    if (checkout === "success" && sessionId) {
+      fetch(`/api/checkout/verify?session_id=${encodeURIComponent(sessionId)}`)
+        .then((r) => r.json())
+        .then(({ paid }: { paid: boolean }) => {
+          if (paid) {
+            upgradeToPro();
+            setCheckoutBanner("success");
+          }
+        })
+        .catch(() => {
+          // Verification failed — do not auto-upgrade; show neutral banner
+          setCheckoutBanner("success");
+        });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const [tab, setTab] = useState<DashboardTab>("syllabus");
 
   // Syllabus mode state
   const [syllabusText, setSyllabusText] = useState("");
@@ -404,18 +537,60 @@ export default function DashboardPage() {
         />
 
         <main className="flex-1 mx-auto w-full max-w-5xl px-6 py-12">
+          {/* Checkout banners */}
+          {checkoutBanner === "success" && (
+            <div className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+              <svg className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-emerald-800">
+                  {isPro ? "You now have Pro access!" : "Payment received — activating your Pro account…"}
+                </p>
+                <p className="mt-0.5 text-xs text-emerald-700">
+                  Thank you for upgrading. All Pro features are now unlocked.
+                </p>
+              </div>
+              <button onClick={() => setCheckoutBanner(null)} className="shrink-0 text-emerald-500 hover:text-emerald-700 transition-colors">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+          {checkoutBanner === "cancel" && (
+            <div className="mb-6 flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4">
+              <svg className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-700">Checkout was cancelled</p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  No charge was made. You can upgrade anytime.
+                </p>
+              </div>
+              <button onClick={() => setCheckoutBanner(null)} className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           {/* Mode toggle */}
           <div className="mb-8 flex flex-col items-center gap-2 text-center">
-            <ModeToggle mode={mode} onChange={setMode} />
+            <ModeToggle tab={tab} onChange={setTab} />
             <p className="text-xs text-gray-400">
-              {mode === "syllabus"
+              {tab === "syllabus"
                 ? "Extract deadlines and build a study plan from your full syllabus"
-                : "Decode a single assignment prompt or rubric into a clear action plan"}
+                : tab === "assignment"
+                  ? "Decode a single assignment prompt or rubric into a clear action plan"
+                  : "Generate a custom practice exam and test your knowledge"}
             </p>
           </div>
 
           {/* ── Syllabus Mode ── */}
-          {mode === "syllabus" && (
+          {tab === "syllabus" && (
             <>
               {!syllabusAnalyzed ? (
                 <div className="mx-auto max-w-2xl">
@@ -644,7 +819,7 @@ export default function DashboardPage() {
           )}
 
           {/* ── Assignment Mode ── */}
-          {mode === "assignment" && (
+          {tab === "assignment" && (
             <>
               {!assignmentAnalyzed ? (
                 <div className="mx-auto max-w-2xl">
@@ -684,6 +859,14 @@ export default function DashboardPage() {
               )}
             </>
           )}
+
+          {/* ── Practice Test Mode ── */}
+          {tab === "practice" && (
+            <PracticeTestMode
+              isPro={isPro}
+              onUpgradeClick={() => setShowModal(true)}
+            />
+          )}
         </main>
       </div>
 
@@ -691,7 +874,6 @@ export default function DashboardPage() {
       <UpgradeModal
         open={showModal}
         onClose={() => setShowModal(false)}
-        onUpgrade={upgradeToPro}
       />
     </>
   );

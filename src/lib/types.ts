@@ -54,3 +54,45 @@ export interface AssignmentAnalysis {
 }
 
 export type AnalysisMode = "syllabus" | "assignment";
+
+// ─── Practice Test types ───────────────────────────────────────────────────────
+
+export type Difficulty = "easy" | "medium" | "hard";
+export type QuestionType = "multiple_choice" | "short_answer" | "mixed";
+
+export interface MCQuestion {
+  id: string;
+  type: "multiple_choice";
+  question: string;
+  options: string[];       // ["A. ...", "B. ...", "C. ...", "D. ..."]
+  correctAnswer: string;   // "A" | "B" | "C" | "D"
+  explanation: string;
+  wrongExplanation: string;
+}
+
+export interface SAQuestion {
+  id: string;
+  type: "short_answer";
+  question: string;
+  sampleAnswer: string;
+  explanation: string;
+  keyPoints: string[];
+}
+
+export type TestQuestion = MCQuestion | SAQuestion;
+
+export interface TestAttempt {
+  id: string;
+  topic: string;
+  difficulty: Difficulty;
+  questionType: QuestionType;
+  date: string;
+  score: number;           // 0–100 for MC/mixed, -1 for SA-only (review mode)
+  totalQuestions: number;
+  correctCount: number;    // MC correct answers only
+  mcCount: number;         // total MC questions in the test
+  questions: TestQuestion[];
+  userAnswers: Record<string, string>;
+}
+
+export type DashboardTab = "syllabus" | "assignment" | "practice";

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 // ─── Pro Badge ─────────────────────────────────────────────────────────────────
 
@@ -90,24 +90,43 @@ const FEATURES = [
 interface Props {
   open: boolean;
   onClose: () => void;
-  onUpgrade: () => void;
 }
 
-export default function UpgradeModal({ open, onClose, onUpgrade }: Props) {
+export default function UpgradeModal({ open, onClose }: Props) {
+  const [loading, setLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!open) return;
+    setCheckoutError(null);
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !loading) onClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, loading]);
 
   if (!open) return null;
 
-  function handleUpgrade() {
-    onUpgrade();
-    onClose();
+  async function handleCheckout() {
+    setLoading(true);
+    setCheckoutError(null);
+    try {
+      const res = await fetch("/api/checkout", { method: "POST" });
+      const json = await res.json();
+
+      if (!res.ok || !json.url) {
+        setCheckoutError(json.error ?? "Could not start checkout. Please try again.");
+        return;
+      }
+
+      // Navigate to Stripe Checkout — page will leave, no need to close modal
+      window.location.href = json.url;
+    } catch {
+      setCheckoutError("Network error. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -115,7 +134,7 @@ export default function UpgradeModal({ open, onClose, onUpgrade }: Props) {
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={() => { if (!loading) onClose(); }}
       />
 
       {/* Panel */}
@@ -123,7 +142,8 @@ export default function UpgradeModal({ open, onClose, onUpgrade }: Props) {
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+          disabled={loading}
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 transition-colors"
           aria-label="Close"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -186,15 +206,33 @@ export default function UpgradeModal({ open, onClose, onUpgrade }: Props) {
             ))}
           </ul>
 
+          {/* Checkout error */}
+          {checkoutError && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {checkoutError}
+            </div>
+          )}
+
           {/* CTA */}
           <button
-            onClick={handleUpgrade}
-            className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 py-3 text-sm font-bold text-white shadow-md shadow-indigo-200 hover:opacity-90 active:scale-[0.99] transition-all"
+            onClick={handleCheckout}
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 py-3 text-sm font-bold text-white shadow-md shadow-indigo-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed transition-all"
           >
-            Upgrade to Pro — $5/month
+            {loading ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Redirecting to checkout…
+              </>
+            ) : (
+              "Upgrade to Pro — $5/month"
+            )}
           </button>
           <p className="mt-3 text-center text-xs text-gray-400">
-            Secure checkout · No commitment · Cancel anytime
+            Secure checkout via Stripe · Cancel anytime
           </p>
         </div>
       </div>
