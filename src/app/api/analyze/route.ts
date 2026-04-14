@@ -191,6 +191,81 @@ function extractJson(text: string): string {
   return text.trim();
 }
 
+function balanceJsonCandidate(text: string): string {
+  let inString = false;
+  let escaped = false;
+  let depth = 0;
+  let end = text.length;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = true;
+    } else if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        end = i + 1;
+        break;
+      }
+    }
+  }
+
+  let candidate = text.slice(0, end).trim();
+  candidate = candidate.replace(/,\s*([}\]])/g, "$1");
+
+  const openBraces = (candidate.match(/\{/g) ?? []).length;
+  const closeBraces = (candidate.match(/\}/g) ?? []).length;
+  if (openBraces > closeBraces) {
+    candidate += "}".repeat(openBraces - closeBraces);
+  }
+
+  const openBrackets = (candidate.match(/\[/g) ?? []).length;
+  const closeBrackets = (candidate.match(/\]/g) ?? []).length;
+  if (openBrackets > closeBrackets) {
+    candidate += "]".repeat(openBrackets - closeBrackets);
+  }
+
+  return candidate;
+}
+
+function parseModelJson(rawText: string): unknown {
+  const candidates = [
+    extractJson(rawText),
+    (() => {
+      const match = rawText.match(/\{[\s\S]*$/);
+      return match ? balanceJsonCandidate(match[0]) : "";
+    })(),
+    (() => {
+      const match = rawText.match(/\{[\s\S]*\}/);
+      return match ? balanceJsonCandidate(match[0]) : "";
+    })(),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error("Model returned text, but no parseable JSON object was found.");
+}
+
 // ─── Route Handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -217,32 +292,51 @@ export async function POST(req: NextRequest) {
 
   try {
     const client = new Anthropic({ apiKey });
+    const preparedText = mode === "syllabus" ? text.trim().slice(0, 6000) : text.trim();
 
     const systemPrompt =
       mode === "assignment" ? ASSIGNMENT_SYSTEM_PROMPT : SYLLABUS_SYSTEM_PROMPT;
 
     const userContent =
       mode === "assignment"
-        ? `Decode this assignment and return structured JSON:\n\n${text}`
-        : `Parse this syllabus and return structured JSON:\n\n${text}`;
+        ? `Decode this assignment and return structured JSON:\n\n${preparedText}`
+        : `Parse this syllabus and return structured JSON:\n\n${preparedText}`;
+
+    console.log(`[analyze] mode=${mode} inputLength=${preparedText.length}`);
 
     const response = await client.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: 4096,
-      system: [
-        {
-          type: "text",
-          text: systemPrompt,
-          cache_control: { type: "ephemeral" },
-        },
-      ],
+      model: "claude-3-5-sonnet",
+      max_tokens: 8192,
+      system: systemPrompt,
       messages: [{ role: "user", content: userContent }],
     });
 
-    const rawText =
-      response.content[0].type === "text" ? response.content[0].text : "";
-    const jsonStr = extractJson(rawText);
-    const parsed = JSON.parse(jsonStr);
+    const rawText = response.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("\n");
+
+    console.log("[analyze] raw response preview:", rawText.slice(0, 500));
+    let parsed: unknown;
+
+    try {
+      parsed = parseModelJson(rawText);
+    } catch (parseError) {
+      console.error(
+        "[analyze] Failed to parse model response:",
+        parseError instanceof Error ? parseError.message : String(parseError)
+      );
+      console.error("[analyze] Raw model response:", rawText);
+      return NextResponse.json(
+        {
+          error:
+            mode === "syllabus"
+              ? "Analysis failed while parsing the model response. Try a shorter syllabus section or re-upload."
+              : "Analysis failed while parsing the model response. Try a shorter section and try again.",
+        },
+        { status: 500 }
+      );
+    }
 
     const data =
       mode === "assignment"
@@ -251,9 +345,17 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ data, mock: false });
   } catch (err) {
-    console.error("[analyze] Claude API error:", err);
+    console.error(
+      "[analyze] Claude API error:",
+      err instanceof Error ? err.message : String(err)
+    );
     return NextResponse.json(
-      { error: "Failed to analyze. Please try again." },
+      {
+        error:
+          mode === "syllabus"
+            ? "The syllabus text was loaded, but analysis failed. Try a shorter section or re-upload."
+            : "Failed to analyze. Please try again.",
+      },
       { status: 500 }
     );
   }

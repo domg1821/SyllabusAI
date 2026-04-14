@@ -167,7 +167,58 @@ function InputCard({
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function extractPdfText(file: File) {
+    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+      "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+      import.meta.url
+    ).toString();
+
+    const data = new Uint8Array(await file.arrayBuffer());
+    const document = await pdfjs.getDocument({ data }).promise;
+    const pages = await Promise.all(
+      Array.from({ length: document.numPages }, async (_, index) => {
+        const page = await document.getPage(index + 1);
+        const content = await page.getTextContent();
+        const lines: { y: number; parts: string[] }[] = [];
+
+        for (const item of content.items) {
+          if (!("str" in item)) continue;
+
+          const value = item.str.replace(/\s+/g, " ").trim();
+          if (!value) continue;
+
+          const y = typeof item.transform?.[5] === "number" ? item.transform[5] : 0;
+          const existingLine = lines.find((line) => Math.abs(line.y - y) < 2);
+
+          if (existingLine) {
+            existingLine.parts.push(value);
+          } else {
+            lines.push({ y, parts: [value] });
+          }
+        }
+
+        return lines
+          .sort((a, b) => b.y - a.y)
+          .map((line) => line.parts.join(" ").replace(/\s+/g, " ").trim())
+          .filter((line) => line && !/^page\s+\d+\s+of\s+\d+$/i.test(line))
+          .join("\n");
+      })
+    );
+
+    const extractedText = pages
+      .filter(Boolean)
+      .join("\n\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]+\n/g, "\n")
+      .trim();
+
+    console.log("Extracted PDF text length:", extractedText.length);
+
+    return extractedText;
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -189,8 +240,19 @@ function InputCard({
       };
       reader.readAsText(file);
     } else if (ext === "pdf") {
-      setFileError("PDF files can't be parsed automatically. Please copy and paste the text directly.");
-      setFileName(null);
+      try {
+        const extractedText = await extractPdfText(file);
+
+        if (!extractedText.trim()) {
+          setFileError("No readable text was found in that PDF. Please paste the text directly.");
+          setFileName(null);
+        } else {
+          onChange(extractedText);
+        }
+      } catch {
+        setFileError("Could not read the PDF. Please try again or paste the text directly.");
+        setFileName(null);
+      }
     } else if (ext === "doc" || ext === "docx") {
       setFileError("Word documents can't be parsed automatically. Please copy and paste the text directly.");
       setFileName(null);
@@ -419,7 +481,10 @@ export default function DashboardPage() {
       const json = await res.json();
 
       if (!res.ok) {
-        setSyllabusError(json.error ?? "Something went wrong. Please try again.");
+        setSyllabusError(
+          json.error ??
+            "The syllabus text was loaded, but analysis failed. Try a shorter section or re-upload."
+        );
         return;
       }
 
@@ -436,7 +501,7 @@ export default function DashboardPage() {
       setSyllabusAnalyzed(true);
       recordAnalysis();
     } catch {
-      setSyllabusError("Network error. Please check your connection and try again.");
+      setSyllabusError("The syllabus text was loaded, but analysis failed. Try a shorter section or re-upload.");
     } finally {
       setSyllabusAnalyzing(false);
     }
