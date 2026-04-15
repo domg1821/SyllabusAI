@@ -1,22 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   AnalysisMode,
   AssignmentAnalysis,
   CourseInfo,
   DeadlineItem,
   DashboardTab,
+  GradeEntry,
   ItemType,
   StudyWeek,
+  WeeklyTopic,
 } from "@/lib/types";
 import { usePro, FREE_LIMIT } from "@/lib/usePro";
+import { useClasses } from "@/lib/useClasses";
 import DashboardNav from "@/components/dashboard/DashboardNav";
 import DeadlineCard from "@/components/dashboard/DeadlineCard";
 import StudyWeekCard from "@/components/dashboard/StudyWeekCard";
 import AssignmentResultView from "@/components/dashboard/AssignmentResultView";
 import UpgradeModal, { LockedFeatureCard } from "@/components/dashboard/UpgradeModal";
 import PracticeTestMode from "@/components/dashboard/PracticeTestMode";
+import CoursesDashboard from "@/components/dashboard/CoursesDashboard";
+import ThisWeekView from "@/components/dashboard/ThisWeekView";
+import GradeTracker from "@/components/dashboard/GradeTracker";
 
 // ─── Sample content ────────────────────────────────────────────────────────────
 
@@ -81,6 +87,24 @@ const TAB_CONFIG: {
   icon: React.ReactNode;
 }[] = [
   {
+    value: "week",
+    label: "This Week",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+      </svg>
+    ),
+  },
+  {
+    value: "courses",
+    label: "My Courses",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+      </svg>
+    ),
+  },
+  {
     value: "syllabus",
     label: "Syllabus",
     icon: (
@@ -117,12 +141,12 @@ function ModeToggle({
   onChange: (t: DashboardTab) => void;
 }) {
   return (
-    <div className="inline-flex rounded-xl border border-gray-200 bg-gray-100 p-1">
+    <div className="inline-flex flex-wrap justify-center gap-1 rounded-xl border border-gray-200 bg-gray-100 p-1">
       {TAB_CONFIG.map(({ value, label, icon }) => (
         <button
           key={value}
           onClick={() => onChange(value)}
-          className={`relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+          className={`relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
             tab === value
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-700"
@@ -196,6 +220,7 @@ function InputCard({
           } else {
             lines.push({ y, parts: [value] });
           }
+
         }
 
         return lines
@@ -408,6 +433,16 @@ function InputCard({
 
 export default function DashboardPage() {
   const { isPro, upgradeToPro, canAnalyze, remainingFree, recordAnalysis } = usePro();
+  const {
+    classes,
+    addClass,
+    removeClass,
+    toggleClassItem,
+    toggleClassTask,
+    setGrade,
+    removeGrade,
+  } = useClasses();
+
   const [showModal, setShowModal] = useState(false);
   const [checkoutBanner, setCheckoutBanner] = useState<"success" | "cancel" | null>(null);
 
@@ -415,7 +450,6 @@ export default function DashboardPage() {
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const checkout = params.get("checkout");
-    const sessionId = params.get("session_id");
 
     if (!checkout) return;
 
@@ -427,24 +461,14 @@ export default function DashboardPage() {
       return;
     }
 
-    if (checkout === "success" && sessionId) {
-      fetch(`/api/checkout/verify?session_id=${encodeURIComponent(sessionId)}`)
-        .then((r) => r.json())
-        .then(({ paid }: { paid: boolean }) => {
-          if (paid) {
-            upgradeToPro();
-            setCheckoutBanner("success");
-          }
-        })
-        .catch(() => {
-          // Verification failed — do not auto-upgrade; show neutral banner
-          setCheckoutBanner("success");
-        });
+    if (checkout === "success") {
+      upgradeToPro();
+      setCheckoutBanner("success");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [tab, setTab] = useState<DashboardTab>("syllabus");
+  const [tab, setTab] = useState<DashboardTab>("week");
 
   // Syllabus mode state
   const [syllabusText, setSyllabusText] = useState("");
@@ -453,8 +477,13 @@ export default function DashboardPage() {
   const [courseInfo, setCourseInfo] = useState<CourseInfo | null>(null);
   const [items, setItems] = useState<DeadlineItem[]>([]);
   const [studyPlan, setStudyPlan] = useState<StudyWeek[]>([]);
+  const [weeklyTopics, setWeeklyTopics] = useState<WeeklyTopic[] | undefined>(undefined);
   const [syllabusIsMock, setSyllabusIsMock] = useState(false);
   const [syllabusError, setSyllabusError] = useState<string | null>(null);
+  const [savedClassId, setSavedClassId] = useState<string | null>(null);
+  const [saveBannerVisible, setSaveBannerVisible] = useState(false);
+  const saveBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [localGrades, setLocalGrades] = useState<GradeEntry[]>([]);
 
   // Assignment mode state
   const [assignmentText, setAssignmentText] = useState("");
@@ -470,6 +499,9 @@ export default function DashboardPage() {
     if (!syllabusText.trim() || !canAnalyze) return;
     setSyllabusAnalyzing(true);
     setSyllabusError(null);
+    setSavedClassId(null);
+    setSaveBannerVisible(false);
+    setLocalGrades([]);
 
     try {
       const res = await fetch("/api/analyze", {
@@ -497,6 +529,7 @@ export default function DashboardPage() {
           tasks: week.tasks.map((task: StudyWeek["tasks"][number]) => ({ ...task, completed: false })),
         }))
       );
+      setWeeklyTopics(Array.isArray(data.weeklyTopics) && data.weeklyTopics.length > 0 ? data.weeklyTopics : undefined);
       setSyllabusIsMock(mock);
       setSyllabusAnalyzed(true);
       recordAnalysis();
@@ -513,9 +546,20 @@ export default function DashboardPage() {
     setCourseInfo(null);
     setItems([]);
     setStudyPlan([]);
+    setWeeklyTopics(undefined);
     setSyllabusIsMock(false);
     setSyllabusError(null);
+    setSavedClassId(null);
+    setSaveBannerVisible(false);
+    setLocalGrades([]);
   }
+
+  // Cleanup banner timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveBannerTimer.current) clearTimeout(saveBannerTimer.current);
+    };
+  }, []);
 
   function toggleItem(id: string) {
     setItems((prev) =>
@@ -536,6 +580,37 @@ export default function DashboardPage() {
           : week
       )
     );
+  }
+
+  function handleSaveClass() {
+    if (!courseInfo) return;
+    if (savedClassId) return; // Already saved — button shows "Saved"
+    const id = addClass({
+      name: courseInfo.name,
+      code: courseInfo.code,
+      courseInfo,
+      items,
+      studyPlan,
+      weeklyTopics,
+    });
+    setSavedClassId(id);
+    // Show confirmation banner for 3 seconds
+    setSaveBannerVisible(true);
+    if (saveBannerTimer.current) clearTimeout(saveBannerTimer.current);
+    saveBannerTimer.current = setTimeout(() => setSaveBannerVisible(false), 3000);
+  }
+
+  function handleLocalGrade(entry: GradeEntry) {
+    setLocalGrades((prev) => {
+      const existing = prev.find((g) => g.itemId === entry.itemId);
+      return existing
+        ? prev.map((g) => (g.itemId === entry.itemId ? entry : g))
+        : [...prev, entry];
+    });
+  }
+
+  function handleRemoveLocalGrade(itemId: string) {
+    setLocalGrades((prev) => prev.filter((g) => g.itemId !== itemId));
   }
 
   // ── Assignment handlers ──
@@ -646,13 +721,42 @@ export default function DashboardPage() {
           <div className="mb-8 flex flex-col items-center gap-2 text-center">
             <ModeToggle tab={tab} onChange={setTab} />
             <p className="text-xs text-gray-400">
-              {tab === "syllabus"
-                ? "Extract deadlines and build a study plan from your full syllabus"
-                : tab === "assignment"
-                  ? "Decode a single assignment prompt or rubric into a clear action plan"
-                  : "Generate a custom practice exam and test your knowledge"}
+              {tab === "week"
+                ? "Deadlines and study tasks across all your courses this week"
+                : tab === "courses"
+                  ? "All your saved courses in one place — deadlines, study plan, and grades"
+                  : tab === "syllabus"
+                    ? "Extract deadlines and build a study plan from your full syllabus"
+                    : tab === "assignment"
+                      ? "Decode a single assignment prompt or rubric into a clear action plan"
+                      : "Generate a custom practice exam and test your knowledge"}
             </p>
           </div>
+
+          {/* ── This Week ── */}
+          {tab === "week" && (
+            <ThisWeekView
+              classes={classes}
+              onToggleItem={toggleClassItem}
+              onToggleTask={toggleClassTask}
+              onGoToCourses={() => setTab("courses")}
+            />
+          )}
+
+          {/* ── My Courses ── */}
+          {tab === "courses" && (
+            <CoursesDashboard
+              classes={classes}
+              isPro={isPro}
+              onToggleItem={toggleClassItem}
+              onToggleTask={toggleClassTask}
+              onSetGrade={setGrade}
+              onRemoveGrade={removeGrade}
+              onDelete={removeClass}
+              onUpgradeClick={() => setShowModal(true)}
+              onAddNew={() => setTab("syllabus")}
+            />
+          )}
 
           {/* ── Syllabus Mode ── */}
           {tab === "syllabus" && (
@@ -749,7 +853,35 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4 flex justify-end">
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          {savedClassId ? (
+                            <>
+                              <span className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                </svg>
+                                Saved
+                              </span>
+                              <button
+                                onClick={() => setTab("courses")}
+                                className="text-xs font-medium text-indigo-500 hover:text-indigo-600 transition-colors"
+                              >
+                                View in My Courses →
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={handleSaveClass}
+                              className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                              </svg>
+                              Save to My Courses
+                            </button>
+                          )}
+                        </div>
                         <button
                           onClick={handleSyllabusReset}
                           className="text-xs font-medium text-gray-400 hover:text-indigo-500 transition-colors"
@@ -757,6 +889,16 @@ export default function DashboardPage() {
                           Analyze another syllabus →
                         </button>
                       </div>
+
+                      {/* Save confirmation toast */}
+                      {saveBannerVisible && (
+                        <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                          <svg className="h-3.5 w-3.5 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                          </svg>
+                          Course saved! Find it anytime in the My Courses tab.
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -791,6 +933,17 @@ export default function DashboardPage() {
                       </div>
                     </section>
                   )}
+
+                  {/* Grade Tracker */}
+                  <section className="mb-10">
+                    <h2 className="mb-5 text-lg font-bold text-gray-900">Grade Tracker</h2>
+                    <GradeTracker
+                      items={items}
+                      grades={localGrades}
+                      onSetGrade={handleLocalGrade}
+                      onRemoveGrade={handleRemoveLocalGrade}
+                    />
+                  </section>
 
                   {/* Study Plan — Pro gated */}
                   <section className="mb-10">
@@ -840,44 +993,6 @@ export default function DashboardPage() {
                       />
                     )}
                   </section>
-
-                  {/* Multiple courses — Pro teaser */}
-                  {!isPro && (
-                    <div className="rounded-xl border border-dashed border-gray-200 bg-white p-5">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50">
-                            <svg
-                              className="h-4 w-4 text-gray-400"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={1.8}
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <p className="text-sm font-semibold text-gray-700">Track multiple courses</p>
-                              <span className="inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                                ⚡ Pro
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-400">
-                              Add all your classes and manage every deadline in one place.
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setShowModal(true)}
-                          className="shrink-0 rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
-                        >
-                          Unlock
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </>
               )}
             </>

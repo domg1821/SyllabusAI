@@ -28,6 +28,8 @@ export interface StudyTask {
   description: string;
   relatedItem: string;
   completed: boolean;
+  notes?: string;              // Additional study tips or context for this task
+  estimatedMinutes?: number;   // Rough time estimate
 }
 
 export interface StudyWeek {
@@ -36,10 +38,18 @@ export interface StudyWeek {
   tasks: StudyTask[];
 }
 
+// Weekly topic/chapter schedule extracted from syllabus
+export interface WeeklyTopic {
+  week: number;
+  topic: string;     // e.g. "Process Scheduling"
+  chapters?: string; // e.g. "Ch. 5–6"
+}
+
 export interface SyllabusAnalysis {
   course: CourseInfo;
   items: DeadlineItem[];
   studyPlan: StudyWeek[];
+  weeklyTopics?: WeeklyTopic[];
 }
 
 export interface AssignmentAnalysis {
@@ -95,4 +105,24 @@ export interface TestAttempt {
   userAnswers: Record<string, string>;
 }
 
-export type DashboardTab = "syllabus" | "assignment" | "practice";
+export type DashboardTab = "syllabus" | "assignment" | "practice" | "courses" | "week";
+
+// ─── Multi-class types ─────────────────────────────────────────────────────────
+
+export interface GradeEntry {
+  itemId: string;
+  earned: number;   // points earned
+  max: number;      // max possible points
+}
+
+export interface SavedClass {
+  id: string;
+  name: string;          // course name (from courseInfo.name)
+  code: string;          // course code
+  createdAt: string;     // ISO date string
+  courseInfo: CourseInfo;
+  items: DeadlineItem[];
+  studyPlan: StudyWeek[];
+  grades: GradeEntry[];
+  weeklyTopics?: WeeklyTopic[];
+}

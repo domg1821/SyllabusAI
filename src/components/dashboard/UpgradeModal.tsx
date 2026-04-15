@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-
 // ─── Pro Badge ─────────────────────────────────────────────────────────────────
 
 export function ProBadge({ className = "" }: { className?: string }) {
@@ -115,8 +114,13 @@ export default function UpgradeModal({ open, onClose }: Props) {
       const res = await fetch("/api/checkout", { method: "POST" });
       const json = await res.json();
 
-      if (!res.ok || !json.url) {
+      if (!res.ok || !json.sessionId) {
         setCheckoutError(json.error ?? "Could not start checkout. Please try again.");
+        return;
+      }
+
+      if (!json.url) {
+        setCheckoutError("Could not start checkout. Please try again.");
         return;
       }
 

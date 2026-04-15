@@ -6,6 +6,7 @@ import {
   AssignmentAnalysis,
   DeadlineItem,
   StudyWeek,
+  WeeklyTopic,
   ItemType,
   Priority,
   AnalysisMode,
@@ -15,7 +16,7 @@ export const maxDuration = 60;
 
 // ─── System Prompts ────────────────────────────────────────────────────────────
 
-const SYLLABUS_SYSTEM_PROMPT = `You are an expert academic syllabus parser. Given a course syllabus, extract all structured information and return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.
+const SYLLABUS_SYSTEM_PROMPT = `You are an expert academic syllabus parser and study strategist. Given a course syllabus, extract all structured information and return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.
 
 The JSON must conform exactly to this shape:
 
@@ -34,10 +35,17 @@ The JSON must conform exactly to this shape:
       "id": "unique-slug (e.g. hw1, quiz2, midterm)",
       "title": "Assignment/quiz/exam/project title",
       "type": "assignment" | "quiz" | "exam" | "project",
-      "dueDate": "Human-readable date (e.g. Sep 19, 2025)",
+      "dueDate": "Human-readable date (e.g. Sep 19, 2025) or TBD if unknown",
       "points": 50,
       "priority": "low" | "medium" | "high",
       "completed": false
+    }
+  ],
+  "weeklyTopics": [
+    {
+      "week": 1,
+      "topic": "Main topic or chapter title for this week (e.g. Process Scheduling)",
+      "chapters": "Chapter references if present (e.g. Ch. 5–6) or empty string"
     }
   ],
   "studyPlan": [
@@ -49,8 +57,10 @@ The JSON must conform exactly to this shape:
           "id": "w1-t1",
           "day": "Monday",
           "date": "Sep 15",
-          "description": "What to study or do",
-          "relatedItem": "Item title this task prepares for",
+          "description": "Specific, actionable task referencing the actual topic (e.g. 'Read Ch. 5 on CPU scheduling: understand FCFS, SJF, and Round Robin algorithms')",
+          "relatedItem": "Exact title of the assignment/quiz/exam this task prepares for",
+          "notes": "1–2 sentence study tip or what to focus on (e.g. 'Pay attention to how turnaround time is calculated — this commonly appears on quizzes.')",
+          "estimatedMinutes": 60,
           "completed": false
         }
       ]
@@ -60,16 +70,28 @@ The JSON must conform exactly to this shape:
 
 Priority rules:
 - "high" for exams and final projects
-- "medium" for quizzes and major assignments
+- "medium" for quizzes and major assignments (worth >30 pts or >10% of grade)
 - "low" for routine homework
 
-Study plan rules:
-- Generate 4–6 weeks covering the full course timeline
-- Each week should have 3–5 tasks spread across different days
-- Tasks should build toward upcoming deadlines
-- Use full day names: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday
+weeklyTopics rules:
+- Extract the weekly topic/chapter schedule if the syllabus contains one
+- If no explicit schedule, infer logical topic progression from assignments and course name
+- Generate 4–8 entries covering the course arc
+- topic should be concise but descriptive (not just "Week 1" — use the actual concept name)
 
-If a field cannot be determined from the syllabus, use sensible defaults (empty string, 0, or omit optional fields).`;
+Study plan rules:
+- Generate 4–8 weeks covering the full course timeline
+- Each week should have 3–5 tasks spread across different days
+- Tasks MUST be highly specific — reference actual chapter names, concepts, or topics from the syllabus (never generic "study chapter X")
+- description: concrete and actionable, naming the exact concept or skill (e.g. "Work through 5 CPU scheduling problems: calculate waiting time for FCFS and Round Robin with quantum=4")
+- notes: 1–2 sentence tip about what to focus on, a common pitfall, or how this connects to an upcoming assessment
+- estimatedMinutes: realistic estimate (30–120 typically)
+- relatedItem: exact title of the upcoming assignment/quiz/exam this week builds toward
+- Use full day names: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday
+- If the syllabus has a topic schedule, align tasks with those topics
+
+If a field cannot be determined from the syllabus, use sensible defaults (empty string, 0, or omit optional fields).
+For weeklyTopics, always generate at least 3–4 entries even if the syllabus is sparse — infer from course name and items.`;
 
 const ASSIGNMENT_SYSTEM_PROMPT = `You are an expert academic writing coach and assignment decoder. Given a single assignment prompt, rubric, or set of instructions, extract structured information and return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.
 
@@ -114,6 +136,7 @@ function sanitizeSyllabusAnalysis(raw: unknown): SyllabusAnalysis {
   const course = (obj.course ?? {}) as Record<string, unknown>;
   const rawItems = Array.isArray(obj.items) ? obj.items : [];
   const rawPlan = Array.isArray(obj.studyPlan) ? obj.studyPlan : [];
+  const rawTopics = Array.isArray(obj.weeklyTopics) ? obj.weeklyTopics : [];
 
   const items: DeadlineItem[] = rawItems.map((item: unknown, i: number) => {
     const it = (item ?? {}) as Record<string, unknown>;
@@ -136,6 +159,11 @@ function sanitizeSyllabusAnalysis(raw: unknown): SyllabusAnalysis {
       weekLabel: String(w.weekLabel ?? `Week ${wi + 1}`),
       tasks: rawTasks.map((task: unknown, ti: number) => {
         const t = (task ?? {}) as Record<string, unknown>;
+        const notes = typeof t.notes === "string" && t.notes.trim() ? t.notes.trim() : undefined;
+        const estimatedMinutes =
+          typeof t.estimatedMinutes === "number" && t.estimatedMinutes > 0
+            ? t.estimatedMinutes
+            : undefined;
         return {
           id: String(t.id ?? `w${wi + 1}-t${ti + 1}`),
           day: validDays.has(t.day as string) ? (t.day as string) : "Monday",
@@ -143,10 +171,23 @@ function sanitizeSyllabusAnalysis(raw: unknown): SyllabusAnalysis {
           description: String(t.description ?? ""),
           relatedItem: String(t.relatedItem ?? ""),
           completed: false,
+          ...(notes ? { notes } : {}),
+          ...(estimatedMinutes ? { estimatedMinutes } : {}),
         };
       }),
     };
   });
+
+  const weeklyTopics: WeeklyTopic[] = rawTopics
+    .map((t: unknown, i: number) => {
+      const tp = (t ?? {}) as Record<string, unknown>;
+      return {
+        week: typeof tp.week === "number" ? tp.week : i + 1,
+        topic: String(tp.topic ?? ""),
+        chapters: typeof tp.chapters === "string" && tp.chapters.trim() ? tp.chapters.trim() : undefined,
+      };
+    })
+    .filter((t) => t.topic);
 
   return {
     course: {
@@ -160,6 +201,7 @@ function sanitizeSyllabusAnalysis(raw: unknown): SyllabusAnalysis {
     },
     items,
     studyPlan,
+    weeklyTopics: weeklyTopics.length > 0 ? weeklyTopics : undefined,
   };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { AssignmentAnalysis } from "@/lib/types";
 import { LockedFeatureCard, ProBadge } from "./UpgradeModal";
 
@@ -101,6 +101,72 @@ function BulletList({
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
+function StepChecklist({ steps }: { steps: string[] }) {
+  const [checked, setChecked] = useState<Set<number>>(new Set());
+
+  function toggle(i: number) {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  }
+
+  const done = checked.size;
+  const total = steps.length;
+
+  return (
+    <div>
+      {total > 0 && (
+        <div className="mb-3">
+          <div className="mb-1 flex items-center justify-between text-xs text-gray-400">
+            <span>{done}/{total} steps done</span>
+            {done > 0 && (
+              <button onClick={() => setChecked(new Set())} className="text-gray-300 hover:text-gray-500 transition-colors">
+                Reset
+              </button>
+            )}
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-gray-100">
+            <div
+              className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-300"
+              style={{ width: `${total > 0 ? (done / total) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
+      )}
+      <ol className="space-y-2">
+        {steps.map((step, i) => {
+          const isChecked = checked.has(i);
+          return (
+            <li key={i} className="flex items-start gap-3">
+              <button
+                onClick={() => toggle(i)}
+                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                  isChecked
+                    ? "border-indigo-500 bg-indigo-500"
+                    : "border-indigo-200 hover:border-indigo-400"
+                }`}
+              >
+                {isChecked ? (
+                  <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                ) : (
+                  <span className="text-[10px] font-bold text-indigo-400">{i + 1}</span>
+                )}
+              </button>
+              <span className={`text-sm leading-relaxed transition-colors ${isChecked ? "line-through text-gray-400" : "text-gray-700"}`}>
+                {step}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
 export default function AssignmentResultView({
   result,
   isMock,
@@ -172,14 +238,14 @@ export default function AssignmentResultView({
       {/* Step-by-step plan — Pro gated */}
       {isPro ? (
         <SectionCard
-          title="Step-by-step plan"
+          title="Step-by-step action plan"
           icon={
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
             </svg>
           }
         >
-          <BulletList items={result.stepByStepPlan} variant="numbered" />
+          <StepChecklist steps={result.stepByStepPlan} />
         </SectionCard>
       ) : (
         <LockedFeatureCard
