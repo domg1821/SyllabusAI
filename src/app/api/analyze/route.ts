@@ -31,12 +31,15 @@ JSON schema:
 }
 
 Rules:
+- items: maximum 20 entries; prioritize exams and finals first, then major projects, then assignments; omit low-priority routine homework if over the limit
 - priority: "high"=exams/finals, "medium"=major assignments (>30pts or >10% of grade), "low"=routine homework
-- weeklyTopics: 3–5 entries with descriptive topic names; infer from course name if no schedule present
-- studyPlan: 3–5 weeks, 2–3 tasks per week; descriptions must reference specific topics or chapters from the syllabus
+- weeklyTopics: maximum 6 entries with descriptive topic names; infer from course name if no schedule present
+- studyPlan: exactly 4 weeks, exactly 3 tasks per week; descriptions must reference specific topics or chapters from the syllabus
 - day: full name (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday)
 - dueDate: human-readable (e.g. "Sep 19, 2025") or "TBD"
-- Use empty string for unknown string fields; 0 for unknown numeric fields`;
+- Use empty string for unknown string fields; 0 for unknown numeric fields
+
+Return ONLY the JSON object, no markdown, no code fences, no explanation.`;
 
 const ASSIGNMENT_SYSTEM_PROMPT = `You are an academic assignment decoder. Return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.
 
@@ -403,7 +406,7 @@ async function handlePost(req: NextRequest) {
     const response = await client.messages.create(
       {
         model: "claude-haiku-4-5",
-        max_tokens: mode === "syllabus" ? 3000 : 2000,
+        max_tokens: mode === "syllabus" ? 4000 : 2000,
         system: systemPrompt,
         messages: [{ role: "user", content: userContent }],
       },
