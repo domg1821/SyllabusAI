@@ -226,6 +226,41 @@ function sanitizeAssignmentAnalysis(raw: unknown): AssignmentAnalysis {
   };
 }
 
+// ─── Truncation ────────────────────────────────────────────────────────────────
+
+const SYLLABUS_MAX_CHARS = 15_000;
+const ASSIGNMENT_MAX_CHARS = 8_000;
+
+function truncateText(raw: string, maxChars: number): { text: string; truncated: boolean } {
+  if (raw.length <= maxChars) return { text: raw, truncated: false };
+
+  // Prefer splitting on paragraph boundaries so we never cut mid-sentence.
+  const paragraphs = raw.split(/\n{2,}/);
+  const kept: string[] = [];
+  let total = 0;
+  for (const para of paragraphs) {
+    const needed = kept.length > 0 ? para.length + 2 : para.length; // +2 for \n\n
+    if (total + needed > maxChars) break;
+    kept.push(para);
+    total += needed;
+  }
+  if (kept.length > 0) return { text: kept.join("\n\n"), truncated: true };
+
+  // Fallback: last sentence boundary in the first maxChars characters.
+  const slice = raw.slice(0, maxChars);
+  const lastSentence = Math.max(
+    slice.lastIndexOf(". "),
+    slice.lastIndexOf(".\n"),
+    slice.lastIndexOf("! "),
+    slice.lastIndexOf("? ")
+  );
+  if (lastSentence > maxChars * 0.5) {
+    return { text: slice.slice(0, lastSentence + 1).trimEnd(), truncated: true };
+  }
+
+  return { text: slice, truncated: true };
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function extractJson(text: string): string {
@@ -402,17 +437,24 @@ export async function POST(req: NextRequest) {
   // ─── Real path ─────────────────────────────────────────────────────────────
   try {
     const client = new Anthropic({ apiKey });
-    const preparedText = mode === "syllabus" ? text.trim().slice(0, 6000) : text.trim();
+    const { text: preparedText, truncated: wasTruncated } = truncateText(
+      text.trim(),
+      mode === "syllabus" ? SYLLABUS_MAX_CHARS : ASSIGNMENT_MAX_CHARS
+    );
 
     const systemPrompt =
       mode === "assignment" ? ASSIGNMENT_SYSTEM_PROMPT : SYLLABUS_SYSTEM_PROMPT;
 
+    const truncationNote = wasTruncated
+      ? `\n\n[Note: This ${mode} was trimmed to fit context limits. Extract all information visible above.]`
+      : "";
+
     const userContent =
       mode === "assignment"
-        ? `Decode this assignment and return structured JSON:\n\n${preparedText}`
-        : `Parse this syllabus and return structured JSON:\n\n${preparedText}`;
+        ? `Decode this assignment and return structured JSON:\n\n${preparedText}${truncationNote}`
+        : `Parse this syllabus and return structured JSON:\n\n${preparedText}${truncationNote}`;
 
-    console.log(`[analyze] mode=${mode} inputLength=${preparedText.length} userId=${user.id}`);
+    console.log(`[analyze] mode=${mode} inputLength=${preparedText.length} truncated=${wasTruncated} userId=${user.id}`);
 
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
@@ -467,7 +509,7 @@ export async function POST(req: NextRequest) {
         : sanitizeSyllabusAnalysis(parsed);
 
     await markUsed();
-    return NextResponse.json({ data, mock: false });
+    return NextResponse.json({ data, mock: false, truncated: wasTruncated });
   } catch (err) {
     console.error(
       "[analyze] Claude API error:",

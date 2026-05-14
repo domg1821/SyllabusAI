@@ -208,8 +208,11 @@ function InputCard({
   const isSyllabus = mode === "syllabus";
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [pdfTruncated, setPdfTruncated] = useState(false);
 
-  async function extractPdfText(file: File) {
+  const MAX_PDF_PAGES = 20;
+
+  async function extractPdfText(file: File): Promise<{ text: string; truncated: boolean }> {
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
     pdfjs.GlobalWorkerOptions.workerSrc = new URL(
       "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
@@ -218,8 +221,10 @@ function InputCard({
 
     const data = new Uint8Array(await file.arrayBuffer());
     const document = await pdfjs.getDocument({ data }).promise;
+    const totalPages = document.numPages;
+    const pagesToProcess = Math.min(totalPages, MAX_PDF_PAGES);
     const pages = await Promise.all(
-      Array.from({ length: document.numPages }, async (_, index) => {
+      Array.from({ length: pagesToProcess }, async (_, index) => {
         const page = await document.getPage(index + 1);
         const content = await page.getTextContent();
         const lines: { y: number; parts: string[] }[] = [];
@@ -256,9 +261,7 @@ function InputCard({
       .replace(/[ \t]+\n/g, "\n")
       .trim();
 
-    console.log("Extracted PDF text length:", extractedText.length);
-
-    return extractedText;
+    return { text: extractedText, truncated: totalPages > MAX_PDF_PAGES };
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -267,6 +270,7 @@ function InputCard({
 
     const ext = file.name.split(".").pop()?.toLowerCase();
     setFileError(null);
+    setPdfTruncated(false);
     setFileName(file.name);
 
     if (ext === "txt") {
@@ -284,13 +288,14 @@ function InputCard({
       reader.readAsText(file);
     } else if (ext === "pdf") {
       try {
-        const extractedText = await extractPdfText(file);
+        const { text: extractedText, truncated } = await extractPdfText(file);
 
         if (!extractedText.trim()) {
           setFileError("No readable text was found in that PDF. Please paste the text directly.");
           setFileName(null);
         } else {
           onChange(extractedText);
+          setPdfTruncated(truncated);
         }
       } catch {
         setFileError("Could not read the PDF. Please try again or paste the text directly.");
@@ -332,7 +337,7 @@ function InputCard({
           </svg>
           <span className="flex-1 truncate text-xs font-medium text-emerald-700">{fileName}</span>
           <button
-            onClick={() => { setFileName(null); onChange(""); }}
+            onClick={() => { setFileName(null); setPdfTruncated(false); onChange(""); }}
             className="shrink-0 text-emerald-500 hover:text-emerald-700 transition-colors"
             aria-label="Remove file"
           >
@@ -340,6 +345,16 @@ function InputCard({
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
           </button>
+        </div>
+      )}
+      {pdfTruncated && (
+        <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+          <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+          <span className="text-xs text-amber-800">
+            Your PDF has more than {MAX_PDF_PAGES} pages — only the first {MAX_PDF_PAGES} were imported. If key deadlines are missing, paste the full text manually.
+          </span>
         </div>
       )}
       {fileError && (
@@ -517,6 +532,7 @@ export default function DashboardPage() {
   const [studyPlan, setStudyPlan] = useState<StudyWeek[]>([]);
   const [weeklyTopics, setWeeklyTopics] = useState<WeeklyTopic[] | undefined>(undefined);
   const [syllabusIsMock, setSyllabusIsMock] = useState(false);
+  const [syllabusWasTruncated, setSyllabusWasTruncated] = useState(false);
   const [syllabusError, setSyllabusError] = useState<string | null>(null);
   const [savedClassId, setSavedClassId] = useState<string | null>(null);
   const [saveBannerVisible, setSaveBannerVisible] = useState(false);
@@ -530,6 +546,7 @@ export default function DashboardPage() {
   const [assignmentAnalyzing, setAssignmentAnalyzing] = useState(false);
   const [assignmentResult, setAssignmentResult] = useState<AssignmentAnalysis | null>(null);
   const [assignmentIsMock, setAssignmentIsMock] = useState(false);
+  const [assignmentWasTruncated, setAssignmentWasTruncated] = useState(false);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
 
   // ── Syllabus handlers ──
@@ -567,7 +584,7 @@ export default function DashboardPage() {
         return;
       }
 
-      const { data, mock } = json;
+      const { data, mock, truncated } = json;
       setCourseInfo(data.course);
       setItems(data.items.map((item: DeadlineItem) => ({ ...item, completed: false })));
       setStudyPlan(
@@ -578,6 +595,7 @@ export default function DashboardPage() {
       );
       setWeeklyTopics(Array.isArray(data.weeklyTopics) && data.weeklyTopics.length > 0 ? data.weeklyTopics : undefined);
       setSyllabusIsMock(mock);
+      setSyllabusWasTruncated(truncated ?? false);
       setSyllabusAnalyzed(true);
       recordAnalysis();
     } catch {
@@ -595,6 +613,7 @@ export default function DashboardPage() {
     setStudyPlan([]);
     setWeeklyTopics(undefined);
     setSyllabusIsMock(false);
+    setSyllabusWasTruncated(false);
     setSyllabusError(null);
     setSavedClassId(null);
     setSaveBannerVisible(false);
@@ -710,6 +729,7 @@ export default function DashboardPage() {
 
       setAssignmentResult(json.data);
       setAssignmentIsMock(json.mock);
+      setAssignmentWasTruncated(json.truncated ?? false);
       setAssignmentAnalyzed(true);
       recordAnalysis();
     } catch {
@@ -724,6 +744,7 @@ export default function DashboardPage() {
     setAssignmentText("");
     setAssignmentResult(null);
     setAssignmentIsMock(false);
+    setAssignmentWasTruncated(false);
     setAssignmentError(null);
   }
 
@@ -941,6 +962,16 @@ export default function DashboardPage() {
                       <span className="font-semibold">Demo mode —</span> No{" "}
                       <code className="rounded bg-amber-100 px-1 font-mono text-xs">ANTHROPIC_API_KEY</code>{" "}
                       detected. Showing sample data.
+                    </div>
+                  )}
+                  {syllabusWasTruncated && (
+                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                      <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                      </svg>
+                      <p className="text-sm text-amber-800">
+                        <span className="font-semibold">Syllabus was trimmed —</span> your syllabus exceeded our limit, so the end was cut off before analysis. All deadlines found above are accurate, but content from later pages may be missing. If anything looks incomplete, paste just the relevant sections and re-analyze.
+                      </p>
                     </div>
                   )}
 
@@ -1200,13 +1231,25 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 assignmentResult && (
-                  <AssignmentResultView
-                    result={assignmentResult}
-                    isMock={assignmentIsMock}
-                    isPro={isPro}
-                    onReset={handleAssignmentReset}
-                    onUpgrade={() => setShowModal(true)}
-                  />
+                  <>
+                    {assignmentWasTruncated && (
+                      <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                        <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                        </svg>
+                        <p className="text-sm text-amber-800">
+                          <span className="font-semibold">Assignment was trimmed —</span> your text was very long, so the end was cut before analysis. The plan above may be incomplete. Try pasting just the rubric or key instructions for a more focused result.
+                        </p>
+                      </div>
+                    )}
+                    <AssignmentResultView
+                      result={assignmentResult}
+                      isMock={assignmentIsMock}
+                      isPro={isPro}
+                      onReset={handleAssignmentReset}
+                      onUpgrade={() => setShowModal(true)}
+                    />
+                  </>
                 )
               )}
               </>

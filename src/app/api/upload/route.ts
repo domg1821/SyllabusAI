@@ -10,7 +10,9 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
 const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
-async function extractPdf(buffer: ArrayBuffer): Promise<string> {
+const MAX_PDF_PAGES = 20;
+
+async function extractPdf(buffer: ArrayBuffer): Promise<{ text: string; truncated: boolean }> {
   const pdfjs = await import("pdfjs-dist");
   // Disable worker — not available in Node.js/Edge environment
   pdfjs.GlobalWorkerOptions.workerSrc = "";
@@ -22,8 +24,10 @@ async function extractPdf(buffer: ArrayBuffer): Promise<string> {
     useSystemFonts: true,
   }).promise;
 
+  const totalPages = doc.numPages;
+  const pagesToProcess = Math.min(totalPages, MAX_PDF_PAGES);
   const parts: string[] = [];
-  for (let i = 1; i <= doc.numPages; i++) {
+  for (let i = 1; i <= pagesToProcess; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
     const pageText = content.items
@@ -31,7 +35,7 @@ async function extractPdf(buffer: ArrayBuffer): Promise<string> {
       .join(" ");
     parts.push(pageText);
   }
-  return parts.join("\n\n");
+  return { text: parts.join("\n\n"), truncated: totalPages > MAX_PDF_PAGES };
 }
 
 async function extractDocx(buffer: ArrayBuffer): Promise<string> {
@@ -111,9 +115,12 @@ export async function POST(req: NextRequest) {
 
   try {
     let text = "";
+    let truncated = false;
 
     if (type === "application/pdf") {
-      text = await extractPdf(buffer);
+      const result = await extractPdf(buffer);
+      text = result.text;
+      truncated = result.truncated;
     } else if (
       type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       type === "application/msword" ||
@@ -140,7 +147,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ text });
+    return NextResponse.json({ text, truncated });
   } catch (err) {
     console.error("[upload] extraction error:", err);
     return NextResponse.json(
