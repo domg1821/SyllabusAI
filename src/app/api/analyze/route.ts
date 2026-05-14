@@ -20,114 +20,43 @@ export const maxDuration = 60;
 
 // ─── System Prompts ────────────────────────────────────────────────────────────
 
-const SYLLABUS_SYSTEM_PROMPT = `You are an expert academic syllabus parser and study strategist. Given a course syllabus, extract all structured information and return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.
+const SYLLABUS_SYSTEM_PROMPT = `You are an academic syllabus parser. Return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.
 
-The JSON must conform exactly to this shape:
-
+JSON schema:
 {
-  "course": {
-    "name": "Full course name",
-    "code": "Course code (e.g. CS 101)",
-    "instructor": "Instructor name with title",
-    "semester": "Semester and year (e.g. Fall 2025)",
-    "credits": 3,
-    "schedule": "Days and times (e.g. MWF 10:00–11:00 AM)",
-    "officeHours": "Office hours or empty string if not specified"
-  },
-  "items": [
-    {
-      "id": "unique-slug (e.g. hw1, quiz2, midterm)",
-      "title": "Assignment/quiz/exam/project title",
-      "type": "assignment" | "quiz" | "exam" | "project",
-      "dueDate": "Human-readable date (e.g. Sep 19, 2025) or TBD if unknown",
-      "points": 50,
-      "priority": "low" | "medium" | "high",
-      "completed": false
-    }
-  ],
-  "weeklyTopics": [
-    {
-      "week": 1,
-      "topic": "Main topic or chapter title for this week (e.g. Process Scheduling)",
-      "chapters": "Chapter references if present (e.g. Ch. 5–6) or empty string"
-    }
-  ],
-  "studyPlan": [
-    {
-      "id": "week-1",
-      "weekLabel": "Week 1 — Sep 15–21",
-      "tasks": [
-        {
-          "id": "w1-t1",
-          "day": "Monday",
-          "date": "Sep 15",
-          "description": "Specific, actionable task referencing the actual topic (e.g. 'Read Ch. 5 on CPU scheduling: understand FCFS, SJF, and Round Robin algorithms')",
-          "relatedItem": "Exact title of the assignment/quiz/exam this task prepares for",
-          "notes": "1–2 sentence study tip or what to focus on (e.g. 'Pay attention to how turnaround time is calculated — this commonly appears on quizzes.')",
-          "estimatedMinutes": 60,
-          "completed": false
-        }
-      ]
-    }
-  ]
+  "course": { "name": "", "code": "", "instructor": "", "semester": "", "credits": 3, "schedule": "", "officeHours": "" },
+  "items": [{ "id": "hw1", "title": "", "type": "assignment"|"quiz"|"exam"|"project", "dueDate": "Sep 19, 2025", "points": 50, "priority": "low"|"medium"|"high", "completed": false }],
+  "weeklyTopics": [{ "week": 1, "topic": "", "chapters": "" }],
+  "studyPlan": [{ "id": "week-1", "weekLabel": "Week 1 — Sep 15–21", "tasks": [{ "id": "w1-t1", "day": "Monday", "date": "Sep 15", "description": "", "relatedItem": "", "notes": "", "estimatedMinutes": 60, "completed": false }] }]
 }
 
-Priority rules:
-- "high" for exams and final projects
-- "medium" for quizzes and major assignments (worth >30 pts or >10% of grade)
-- "low" for routine homework
+Rules:
+- priority: "high"=exams/finals, "medium"=major assignments (>30pts or >10% of grade), "low"=routine homework
+- weeklyTopics: 3–5 entries with descriptive topic names; infer from course name if no schedule present
+- studyPlan: 3–5 weeks, 2–3 tasks per week; descriptions must reference specific topics or chapters from the syllabus
+- day: full name (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday)
+- dueDate: human-readable (e.g. "Sep 19, 2025") or "TBD"
+- Use empty string for unknown string fields; 0 for unknown numeric fields`;
 
-weeklyTopics rules:
-- Extract the weekly topic/chapter schedule if the syllabus contains one
-- If no explicit schedule, infer logical topic progression from assignments and course name
-- Generate 4–8 entries covering the course arc
-- topic should be concise but descriptive (not just "Week 1" — use the actual concept name)
+const ASSIGNMENT_SYSTEM_PROMPT = `You are an academic assignment decoder. Return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.
 
-Study plan rules:
-- Generate 4–8 weeks covering the full course timeline
-- Each week should have 3–5 tasks spread across different days
-- Tasks MUST be highly specific — reference actual chapter names, concepts, or topics from the syllabus (never generic "study chapter X")
-- description: concrete and actionable, naming the exact concept or skill (e.g. "Work through 5 CPU scheduling problems: calculate waiting time for FCFS and Round Robin with quantum=4")
-- notes: 1–2 sentence tip about what to focus on, a common pitfall, or how this connects to an upcoming assessment
-- estimatedMinutes: realistic estimate (30–120 typically)
-- relatedItem: exact title of the upcoming assignment/quiz/exam this week builds toward
-- Use full day names: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday
-- If the syllabus has a topic schedule, align tasks with those topics
-
-If a field cannot be determined from the syllabus, use sensible defaults (empty string, 0, or omit optional fields).
-For weeklyTopics, always generate at least 3–4 entries even if the syllabus is sparse — infer from course name and items.`;
-
-const ASSIGNMENT_SYSTEM_PROMPT = `You are an expert academic writing coach and assignment decoder. Given a single assignment prompt, rubric, or set of instructions, extract structured information and return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.
-
-The JSON must conform exactly to this shape:
-
+JSON schema:
 {
-  "title": "Assignment title (infer from text if not explicit)",
-  "dueDate": "Due date if mentioned, otherwise empty string",
-  "whatProfessorWants": "A clear 2–4 sentence summary of what the instructor is looking for. Focus on the academic goal and the type of thinking required.",
-  "deliverables": [
-    "Concrete, specific things the student must produce or submit (format, length, file type, etc.)"
-  ],
-  "stepByStepPlan": [
-    "Ordered action steps to complete this assignment successfully. Be concrete and time-aware."
-  ],
-  "suggestedStructure": [
-    "Recommended structure or outline sections for the final deliverable"
-  ],
-  "commonMistakes": [
-    "Mistakes students commonly make on this type of assignment, based on what the prompt emphasizes"
-  ],
-  "rubricNotes": [
-    "Grading criteria or rubric items extracted from the prompt. Empty array if none present."
-  ]
+  "title": "",
+  "dueDate": "",
+  "whatProfessorWants": "2–3 sentence summary of what the instructor wants",
+  "deliverables": ["specific items to submit"],
+  "stepByStepPlan": ["5–7 ordered action steps"],
+  "suggestedStructure": ["outline sections for the deliverable"],
+  "commonMistakes": ["mistakes specific to this assignment type"],
+  "rubricNotes": ["grading criteria from the prompt"]
 }
 
-Guidelines:
-- stepByStepPlan should have 5–8 concrete steps in chronological order
-- suggestedStructure should match what the deliverable actually is (paper outline, code structure, presentation flow, etc.)
-- commonMistakes should be sharp and specific, not generic advice
-- If no rubric is present, return an empty rubricNotes array
-- All string values should be clear, direct, and student-facing`;
+Rules:
+- stepByStepPlan: 5–7 concrete steps in chronological order
+- commonMistakes: specific to this prompt, not generic advice
+- rubricNotes: empty array [] if no rubric is present
+- Keep all strings concise and student-facing`;
 
 // ─── Sanitizers ────────────────────────────────────────────────────────────────
 
@@ -473,8 +402,8 @@ async function handlePost(req: NextRequest) {
 
     const response = await client.messages.create(
       {
-        model: "claude-sonnet-4-6",
-        max_tokens: 8192,
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: mode === "syllabus" ? 2000 : 1500,
         system: systemPrompt,
         messages: [{ role: "user", content: userContent }],
       },

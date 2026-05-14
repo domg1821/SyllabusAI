@@ -15,52 +15,23 @@ export const maxDuration = 60;
 
 // ─── System Prompt ─────────────────────────────────────────────────────────────
 
-const PRACTICE_TEST_SYSTEM_PROMPT = `You are an expert educator and exam question writer. Generate a practice test in JSON format based on the given topic, difficulty, and question type. Return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.
+const PRACTICE_TEST_SYSTEM_PROMPT = `You are an exam question writer. Return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.
 
-The JSON must conform exactly to this shape:
-
+JSON schema:
 {
   "questions": [
-    // For multiple_choice questions:
-    {
-      "id": "q1",
-      "type": "multiple_choice",
-      "question": "Clear, direct question text",
-      "options": ["A. First option", "B. Second option", "C. Third option", "D. Fourth option"],
-      "correctAnswer": "A",
-      "explanation": "Concise explanation of why the correct answer is right, with relevant reasoning or context.",
-      "wrongExplanation": "Brief explanation of why each wrong option is incorrect: B is wrong because...; C is wrong because...; D is wrong because..."
-    },
-    // For short_answer questions:
-    {
-      "id": "q2",
-      "type": "short_answer",
-      "question": "Clear question that requires a written response",
-      "sampleAnswer": "A comprehensive model answer the student should aim for",
-      "explanation": "What makes a good answer and what key concepts should be addressed",
-      "keyPoints": ["Key concept 1", "Key concept 2", "Key concept 3"]
-    }
+    { "id": "q1", "type": "multiple_choice", "question": "", "options": ["A. option", "B. option", "C. option", "D. option"], "correctAnswer": "A", "explanation": "", "wrongExplanation": "" },
+    { "id": "q2", "type": "short_answer", "question": "", "sampleAnswer": "", "explanation": "", "keyPoints": [""] }
   ]
 }
 
-Difficulty guidelines:
-- easy: Recall and basic comprehension. Straightforward questions about definitions, facts, and simple concepts.
-- medium: Application and analysis. Questions require applying concepts to scenarios or analyzing relationships.
-- hard: Synthesis and evaluation. Questions require combining multiple concepts, critical thinking, or nuanced understanding.
-
-Question type rules:
-- multiple_choice only: ALL questions must have type "multiple_choice"
-- short_answer only: ALL questions must have type "short_answer"
-- mixed: alternate between "multiple_choice" and "short_answer" (roughly half and half)
-
-Additional rules:
-- Each question must directly test the given topic — no generic filler
-- Multiple choice: all 4 options must be plausible; exactly one correct answer
-- correctAnswer must be exactly one of: "A", "B", "C", "D" — no deviations
-- Options must be labeled exactly: "A. text", "B. text", "C. text", "D. text"
-- Explanations must be educational — explain the reasoning, not just restate the answer
-- Questions must be fully self-contained (no "refer to the passage" or "from the table" references)
-- Generate exactly the number of questions requested`;
+Rules:
+- Generate exactly the requested number of questions on the given topic
+- correctAnswer: exactly one of "A", "B", "C", "D"
+- options: exactly 4, labeled "A. text", "B. text", "C. text", "D. text"; all must be plausible
+- Difficulty: easy=recall/definitions, medium=application/analysis, hard=synthesis/evaluation
+- Question types: multiple_choice=all MC, short_answer=all SA, mixed=roughly half each
+- Each question must directly test the topic — no filler; questions must be self-contained`;
 
 // ─── Contextual Mock Generator ─────────────────────────────────────────────────
 
@@ -324,8 +295,8 @@ Return ONLY a valid JSON object with a "questions" array containing exactly ${qu
 
     const response = await client.messages.create(
       {
-        model: "claude-opus-4-6",
-        max_tokens: 4096,
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2000,
         system: [
           {
             type: "text",
