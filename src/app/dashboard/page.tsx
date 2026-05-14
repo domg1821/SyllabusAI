@@ -591,19 +591,52 @@ export default function DashboardPage() {
       }
 
       const { data, mock, truncated } = json;
+
+      // Pre-compute mapped values so they can be passed directly to addClass
+      // without waiting for React state to flush.
+      const mappedItems: DeadlineItem[] = data.items.map((item: DeadlineItem) => ({ ...item, completed: false }));
+      const mappedPlan: StudyWeek[] = data.studyPlan.map((week: StudyWeek) => ({
+        ...week,
+        tasks: week.tasks.map((task: StudyWeek["tasks"][number]) => ({ ...task, completed: false })),
+      }));
+      const parsedTopics: WeeklyTopic[] | undefined =
+        Array.isArray(data.weeklyTopics) && data.weeklyTopics.length > 0
+          ? data.weeklyTopics
+          : undefined;
+
       setCourseInfo(data.course);
-      setItems(data.items.map((item: DeadlineItem) => ({ ...item, completed: false })));
-      setStudyPlan(
-        data.studyPlan.map((week: StudyWeek) => ({
-          ...week,
-          tasks: week.tasks.map((task: StudyWeek["tasks"][number]) => ({ ...task, completed: false })),
-        }))
-      );
-      setWeeklyTopics(Array.isArray(data.weeklyTopics) && data.weeklyTopics.length > 0 ? data.weeklyTopics : undefined);
+      setItems(mappedItems);
+      setStudyPlan(mappedPlan);
+      setWeeklyTopics(parsedTopics);
       setSyllabusIsMock(mock);
       setSyllabusWasTruncated(truncated ?? false);
       setSyllabusAnalyzed(true);
       recordAnalysis();
+
+      // Auto-save real analyses so This Week / My Courses tabs update immediately.
+      // Skip mock (demo) data — no value in persisting sample content.
+      if (!mock) {
+        const duplicate = classes.find(
+          (c) =>
+            (data.course.code && c.code === data.course.code) ||
+            c.name.toLowerCase() === data.course.name.toLowerCase()
+        );
+        if (duplicate) {
+          setSavedClassId(duplicate.id);
+        } else {
+          const id = addClass({
+            name: data.course.name,
+            code: data.course.code,
+            courseInfo: data.course,
+            items: mappedItems,
+            studyPlan: mappedPlan,
+            weeklyTopics: parsedTopics,
+            grades: [],
+            rawText: syllabusText,
+          });
+          setSavedClassId(id);
+        }
+      }
     } catch (err) {
       setSyllabusError(err instanceof Error ? err.message : "Network error. Please check your connection and try again.");
     } finally {
