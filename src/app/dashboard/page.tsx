@@ -566,7 +566,13 @@ export default function DashboardPage() {
         body: JSON.stringify({ text: syllabusText, mode: "syllabus" }),
       });
 
-      const json = await res.json();
+      const responseText = await res.text();
+      let json: ReturnType<typeof JSON.parse>;
+      try {
+        json = JSON.parse(responseText);
+      } catch {
+        throw new Error(responseText || `Server error (${res.status})`);
+      }
 
       if (res.status === 401) {
         setSyllabusError("Session expired. Please sign in again.");
@@ -712,7 +718,13 @@ export default function DashboardPage() {
         body: JSON.stringify({ text: assignmentText, mode: "assignment" }),
       });
 
-      const json = await res.json();
+      const responseText = await res.text();
+      let json: ReturnType<typeof JSON.parse>;
+      try {
+        json = JSON.parse(responseText);
+      } catch {
+        throw new Error(responseText || `Server error (${res.status})`);
+      }
 
       if (res.status === 401) {
         setAssignmentError("Session expired. Please sign in again.");
@@ -732,8 +744,8 @@ export default function DashboardPage() {
       setAssignmentWasTruncated(json.truncated ?? false);
       setAssignmentAnalyzed(true);
       recordAnalysis();
-    } catch {
-      setAssignmentError("Network error. Please check your connection and try again.");
+    } catch (err) {
+      setAssignmentError(err instanceof Error ? err.message : "Network error. Please check your connection and try again.");
     } finally {
       setAssignmentAnalyzing(false);
     }

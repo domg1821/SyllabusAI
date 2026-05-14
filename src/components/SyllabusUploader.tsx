@@ -55,7 +55,14 @@ export default function SyllabusUploader({ onExtracted }: Props) {
       form.append("file", file);
 
       const res = await fetch("/api/upload", { method: "POST", body: form });
-      const json = await res.json();
+
+      const responseText = await res.text();
+      let json: ReturnType<typeof JSON.parse>;
+      try {
+        json = JSON.parse(responseText);
+      } catch {
+        throw new Error(responseText || `Server error (${res.status})`);
+      }
 
       if (!res.ok) {
         setError(json.error ?? "Upload failed. Please try again.");
@@ -63,8 +70,8 @@ export default function SyllabusUploader({ onExtracted }: Props) {
       }
 
       onExtracted?.(json.text as string);
-    } catch {
-      setError("Network error. Please check your connection and try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }

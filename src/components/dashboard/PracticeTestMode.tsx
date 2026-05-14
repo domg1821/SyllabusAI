@@ -68,7 +68,13 @@ export default function PracticeTestMode({ isPro, onUpgradeClick, classes }: Pro
         body: JSON.stringify(opts),
       });
 
-      const json = await res.json();
+      const responseText = await res.text();
+      let json: ReturnType<typeof JSON.parse>;
+      try {
+        json = JSON.parse(responseText);
+      } catch {
+        throw new Error(responseText || `Server error (${res.status})`);
+      }
 
       if (!res.ok) {
         setGenerateError(json.error ?? "Failed to generate test. Please try again.");
@@ -83,8 +89,8 @@ export default function PracticeTestMode({ isPro, onUpgradeClick, classes }: Pro
       setUserAnswers({});
       setIsMock(json.mock ?? false);
       setView("exam");
-    } catch {
-      setGenerateError("Network error. Please check your connection and try again.");
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : "Network error. Please check your connection and try again.");
     } finally {
       setGenerating(false);
     }
