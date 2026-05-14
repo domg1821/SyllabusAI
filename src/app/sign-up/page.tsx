@@ -14,6 +14,7 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [emailSent, setEmailSent] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,6 +26,10 @@ export default function SignUpPage() {
     }
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
+      return;
+    }
+    if (!agreed) {
+      setError("You must agree to the Terms of Service and Privacy Policy.");
       return;
     }
 
@@ -201,6 +206,36 @@ export default function SignUpPage() {
               className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
             />
           </div>
+
+          {/* Terms agreement */}
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span className="text-xs leading-relaxed text-gray-500">
+              I agree to the{" "}
+              <a
+                href="/legal/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+              >
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a
+                href="/legal/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+              >
+                Privacy Policy
+              </a>
+            </span>
+          </label>
 
           {/* Error */}
           {error && (

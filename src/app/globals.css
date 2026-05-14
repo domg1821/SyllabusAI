@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
+/* Class-based dark mode — applied via ThemeProvider which toggles .dark on <html> */
+@custom-variant dark (&:is(.dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #0f0f0f;
+}
+
+/* Override CSS vars for dark mode */
+.dark {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
 }
 
 @theme inline {

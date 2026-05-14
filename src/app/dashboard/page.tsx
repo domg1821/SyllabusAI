@@ -23,6 +23,7 @@ import PracticeTestMode from "@/components/dashboard/PracticeTestMode";
 import CoursesDashboard from "@/components/dashboard/CoursesDashboard";
 import ThisWeekView from "@/components/dashboard/ThisWeekView";
 import GradeTracker from "@/components/dashboard/GradeTracker";
+import CalendarView from "@/components/dashboard/CalendarView";
 
 // ─── Sample content ────────────────────────────────────────────────────────────
 
@@ -79,6 +80,19 @@ const groupConfig: Record<ItemType, { title: string }> = {
   project: { title: "Projects" },
 };
 
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
+
+function CoursesLoadingSkeleton() {
+  return (
+    <div className="space-y-3 animate-pulse">
+      <div className="h-7 w-32 rounded-lg bg-gray-200" />
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="h-16 rounded-xl bg-gray-100" />
+      ))}
+    </div>
+  );
+}
+
 // ─── Mode Toggle ───────────────────────────────────────────────────────────────
 
 const TAB_CONFIG: {
@@ -105,20 +119,11 @@ const TAB_CONFIG: {
     ),
   },
   {
-    value: "syllabus",
-    label: "Syllabus",
+    value: "analyze",
+    label: "Analyze",
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-      </svg>
-    ),
-  },
-  {
-    value: "assignment",
-    label: "Assignment",
-    icon: (
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
       </svg>
     ),
   },
@@ -128,6 +133,15 @@ const TAB_CONFIG: {
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+    ),
+  },
+  {
+    value: "calendar",
+    label: "Calendar",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
       </svg>
     ),
   },
@@ -141,15 +155,15 @@ function ModeToggle({
   onChange: (t: DashboardTab) => void;
 }) {
   return (
-    <div className="inline-flex flex-wrap justify-center gap-1 rounded-xl border border-gray-200 bg-gray-100 p-1">
+    <div className="inline-flex flex-wrap justify-center gap-1 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 p-1">
       {TAB_CONFIG.map(({ value, label, icon }) => (
         <button
           key={value}
           onClick={() => onChange(value)}
           className={`relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
             tab === value
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 shadow-sm"
+              : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
           }`}
         >
           {icon}
@@ -173,6 +187,7 @@ function InputCard({
   canAnalyze,
   remainingFree,
   isPro,
+  proLoading,
   onUpgradeClick,
 }: {
   mode: AnalysisMode;
@@ -185,6 +200,7 @@ function InputCard({
   canAnalyze: boolean;
   remainingFree: number;
   isPro: boolean;
+  proLoading: boolean;
   onUpgradeClick: () => void;
 }) {
   const isSyllabus = mode === "syllabus";
@@ -293,7 +309,7 @@ function InputCard({
   const fileLoaded = fileName !== null && fileError === null;
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
       <textarea
         value={text}
         onChange={(e) => onChange(e.target.value)}
@@ -303,7 +319,7 @@ function InputCard({
             : "Paste your assignment prompt, rubric, or instructions here..."
         }
         rows={10}
-        className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm leading-relaxed text-gray-700 placeholder-gray-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
+        className="w-full resize-none rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 p-4 text-sm leading-relaxed text-gray-700 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-500 focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition-all"
       />
 
       {/* File feedback */}
@@ -384,8 +400,8 @@ function InputCard({
         )}
       </div>
 
-      {/* Usage indicator for free users */}
-      {!isPro && (
+      {/* Usage indicator for free users — hidden while Pro status is resolving */}
+      {!isPro && !proLoading && (
         <div className="mt-3 flex items-center justify-between">
           <p className="text-xs text-gray-400">
             No {isSyllabus ? "syllabus" : "assignment"} on hand?{" "}
@@ -414,7 +430,7 @@ function InputCard({
         </div>
       )}
 
-      {isPro && (
+      {(isPro || proLoading) && (
         <p className="mt-4 text-center text-xs text-gray-400">
           No {isSyllabus ? "syllabus" : "assignment"} on hand?{" "}
           <button
@@ -432,9 +448,10 @@ function InputCard({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { isPro, upgradeToPro, canAnalyze, remainingFree, recordAnalysis } = usePro();
+  const { isPro, proLoading, activatePro, refreshPro, canAnalyze, remainingFree, recordAnalysis } = usePro();
   const {
     classes,
+    loading: classesLoading,
     addClass,
     removeClass,
     toggleClassItem,
@@ -462,13 +479,32 @@ export default function DashboardPage() {
     }
 
     if (checkout === "success") {
-      upgradeToPro();
       setCheckoutBanner("success");
+      // Verify the session with Stripe and activate Pro in Supabase.
+      // This is the fast path — the webhook is the durable backup.
+      const sessionId = params.get("session_id");
+      if (sessionId) {
+        fetch(`/api/checkout/verify?session_id=${encodeURIComponent(sessionId)}`)
+          .then((r) => r.json())
+          .then((json) => {
+            if (json.paid) {
+              // Immediately ungate — no DB round-trip needed, Stripe confirmed payment.
+              // refreshPro() follows as a DB confirmation; on error it keeps the true value.
+              activatePro();
+              refreshPro();
+            }
+          })
+          .catch(() => {
+            // Silently ignore — user will see Pro status on next page load
+            // once the Stripe webhook has fired.
+          });
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [tab, setTab] = useState<DashboardTab>("week");
+  const [analyzeMode, setAnalyzeMode] = useState<"syllabus" | "assignment">("syllabus");
 
   // Syllabus mode state
   const [syllabusText, setSyllabusText] = useState("");
@@ -482,6 +518,7 @@ export default function DashboardPage() {
   const [syllabusError, setSyllabusError] = useState<string | null>(null);
   const [savedClassId, setSavedClassId] = useState<string | null>(null);
   const [saveBannerVisible, setSaveBannerVisible] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const saveBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [localGrades, setLocalGrades] = useState<GradeEntry[]>([]);
 
@@ -512,6 +549,14 @@ export default function DashboardPage() {
 
       const json = await res.json();
 
+      if (res.status === 401) {
+        setSyllabusError("Session expired. Please sign in again.");
+        return;
+      }
+      if (res.status === 403) {
+        setShowModal(true);
+        return;
+      }
       if (!res.ok) {
         setSyllabusError(
           json.error ??
@@ -551,6 +596,7 @@ export default function DashboardPage() {
     setSyllabusError(null);
     setSavedClassId(null);
     setSaveBannerVisible(false);
+    setSaveError(null);
     setLocalGrades([]);
   }
 
@@ -585,6 +631,19 @@ export default function DashboardPage() {
   function handleSaveClass() {
     if (!courseInfo) return;
     if (savedClassId) return; // Already saved — button shows "Saved"
+
+    // Duplicate guard: same course code or exact name already in saved list
+    const duplicate = classes.find(
+      (c) =>
+        (courseInfo.code && c.code === courseInfo.code) ||
+        c.name.toLowerCase() === courseInfo.name.toLowerCase()
+    );
+    if (duplicate) {
+      setSaveError("This course is already saved. View it in My Courses.");
+      return;
+    }
+
+    setSaveError(null);
     const id = addClass({
       name: courseInfo.name,
       code: courseInfo.code,
@@ -592,6 +651,7 @@ export default function DashboardPage() {
       items,
       studyPlan,
       weeklyTopics,
+      grades: localGrades,
     });
     setSavedClassId(id);
     // Show confirmation banner for 3 seconds
@@ -607,10 +667,14 @@ export default function DashboardPage() {
         ? prev.map((g) => (g.itemId === entry.itemId ? entry : g))
         : [...prev, entry];
     });
+    // Keep saved class in sync if already saved
+    if (savedClassId) setGrade(savedClassId, entry);
   }
 
   function handleRemoveLocalGrade(itemId: string) {
     setLocalGrades((prev) => prev.filter((g) => g.itemId !== itemId));
+    // Keep saved class in sync if already saved
+    if (savedClassId) removeGrade(savedClassId, itemId);
   }
 
   // ── Assignment handlers ──
@@ -629,6 +693,14 @@ export default function DashboardPage() {
 
       const json = await res.json();
 
+      if (res.status === 401) {
+        setAssignmentError("Session expired. Please sign in again.");
+        return;
+      }
+      if (res.status === 403) {
+        setShowModal(true);
+        return;
+      }
       if (!res.ok) {
         setAssignmentError(json.error ?? "Something went wrong. Please try again.");
         return;
@@ -670,10 +742,11 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col">
         <DashboardNav
           isPro={isPro}
           onUpgradeClick={() => setShowModal(true)}
+          classes={classes}
         />
 
         <main className="flex-1 mx-auto w-full max-w-5xl px-6 py-12">
@@ -725,26 +798,36 @@ export default function DashboardPage() {
                 ? "Deadlines and study tasks across all your courses this week"
                 : tab === "courses"
                   ? "All your saved courses in one place — deadlines, study plan, and grades"
-                  : tab === "syllabus"
-                    ? "Extract deadlines and build a study plan from your full syllabus"
-                    : tab === "assignment"
-                      ? "Decode a single assignment prompt or rubric into a clear action plan"
-                      : "Generate a custom practice exam and test your knowledge"}
+                  : tab === "analyze"
+                    ? analyzeMode === "syllabus"
+                      ? "Extract deadlines and build a study plan from your full syllabus"
+                      : "Decode a single assignment prompt or rubric into a clear action plan"
+                    : tab === "practice"
+                      ? "Generate a custom practice exam and test your knowledge"
+                      : "See all your deadlines mapped across the month"}
             </p>
           </div>
 
           {/* ── This Week ── */}
           {tab === "week" && (
-            <ThisWeekView
-              classes={classes}
-              onToggleItem={toggleClassItem}
-              onToggleTask={toggleClassTask}
-              onGoToCourses={() => setTab("courses")}
-            />
+            classesLoading ? (
+              <CoursesLoadingSkeleton />
+            ) : (
+              <ThisWeekView
+                classes={classes}
+                onToggleItem={toggleClassItem}
+                onToggleTask={toggleClassTask}
+                onGoToCourses={() => setTab("courses")}
+                onGoToPractice={() => setTab("practice")}
+              />
+            )
           )}
 
           {/* ── My Courses ── */}
           {tab === "courses" && (
+            classesLoading ? (
+              <CoursesLoadingSkeleton />
+            ) : (
             <CoursesDashboard
               classes={classes}
               isPro={isPro}
@@ -754,13 +837,51 @@ export default function DashboardPage() {
               onRemoveGrade={removeGrade}
               onDelete={removeClass}
               onUpgradeClick={() => setShowModal(true)}
-              onAddNew={() => setTab("syllabus")}
+              onAddNew={() => { setTab("analyze"); setAnalyzeMode("syllabus"); }}
             />
+            )
           )}
 
-          {/* ── Syllabus Mode ── */}
-          {tab === "syllabus" && (
+          {/* ── Analyze Mode (Syllabus + Assignment) ── */}
+          {tab === "analyze" && (
             <>
+              {/* Inner sub-mode toggle — shown when not showing analyzed results */}
+              {!(analyzeMode === "syllabus" && syllabusAnalyzed) && !(analyzeMode === "assignment" && assignmentAnalyzed) && (
+                <div className="mx-auto max-w-2xl mb-6">
+                  <div className="inline-flex rounded-xl border border-gray-200 bg-gray-100 p-1">
+                    <button
+                      onClick={() => setAnalyzeMode("syllabus")}
+                      className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                        analyzeMode === "syllabus"
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                      </svg>
+                      Syllabus
+                    </button>
+                    <button
+                      onClick={() => setAnalyzeMode("assignment")}
+                      className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                        analyzeMode === "assignment"
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                      </svg>
+                      Assignment
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Syllabus sub-mode */}
+              {analyzeMode === "syllabus" && (
+              <>
               {!syllabusAnalyzed ? (
                 <div className="mx-auto max-w-2xl">
                   <div className="mb-6 text-center">
@@ -772,6 +893,30 @@ export default function DashboardPage() {
                       and build a personalized weekly study plan.
                     </p>
                   </div>
+
+                  {/* Onboarding flow hint */}
+                  {classes.length === 0 && (
+                    <div className="mb-5 flex items-center justify-center gap-2 text-xs text-gray-400">
+                      <span className="flex items-center gap-1 font-semibold text-indigo-600">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">1</span>
+                        Analyze
+                      </span>
+                      <svg className="h-3 w-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                      </svg>
+                      <span className="flex items-center gap-1">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-500">2</span>
+                        Save course
+                      </span>
+                      <svg className="h-3 w-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                      </svg>
+                      <span className="flex items-center gap-1">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-500">3</span>
+                        Track your week
+                      </span>
+                    </div>
+                  )}
                   <InputCard
                     mode="syllabus"
                     text={syllabusText}
@@ -783,6 +928,7 @@ export default function DashboardPage() {
                     canAnalyze={canAnalyze}
                     remainingFree={remainingFree}
                     isPro={isPro}
+                    proLoading={proLoading}
                     onUpgradeClick={() => setShowModal(true)}
                   />
                 </div>
@@ -798,7 +944,7 @@ export default function DashboardPage() {
 
                   {/* Course header */}
                   {courseInfo && (
-                    <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <div className="mb-8 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -896,7 +1042,20 @@ export default function DashboardPage() {
                           <svg className="h-3.5 w-3.5 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                           </svg>
-                          Course saved! Find it anytime in the My Courses tab.
+                          Course saved! Deadlines, study plan, and grades are all stored in My Courses.
+                        </div>
+                      )}
+
+                      {/* Duplicate warning */}
+                      {saveError && (
+                        <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                          <span>{saveError}</span>
+                          <button
+                            onClick={() => setTab("courses")}
+                            className="shrink-0 font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+                          >
+                            View →
+                          </button>
                         </div>
                       )}
                     </div>
@@ -958,9 +1117,19 @@ export default function DashboardPage() {
 
                     {isPro ? (
                       <div className="space-y-4">
-                        {studyPlan.map((week) => (
-                          <StudyWeekCard key={week.id} week={week} onToggleTask={toggleTask} />
-                        ))}
+                        {studyPlan.map((week) => {
+                          const wn = week.weekLabel.match(/Week\s+(\d+)/i)?.[1];
+                          const wt = wn ? weeklyTopics?.find((t) => t.week === parseInt(wn)) : undefined;
+                          return (
+                            <StudyWeekCard
+                              key={week.id}
+                              week={week}
+                              onToggleTask={toggleTask}
+                              weekTopic={wt?.topic}
+                              weekChapters={wt?.chapters}
+                            />
+                          );
+                        })}
                       </div>
                     ) : (
                       <LockedFeatureCard
@@ -995,12 +1164,12 @@ export default function DashboardPage() {
                   </section>
                 </>
               )}
-            </>
-          )}
+              </>
+              )}
 
-          {/* ── Assignment Mode ── */}
-          {tab === "assignment" && (
-            <>
+              {/* Assignment sub-mode */}
+              {analyzeMode === "assignment" && (
+              <>
               {!assignmentAnalyzed ? (
                 <div className="mx-auto max-w-2xl">
                   <div className="mb-6 text-center">
@@ -1023,6 +1192,7 @@ export default function DashboardPage() {
                     canAnalyze={canAnalyze}
                     remainingFree={remainingFree}
                     isPro={isPro}
+                    proLoading={proLoading}
                     onUpgradeClick={() => setShowModal(true)}
                   />
                 </div>
@@ -1037,6 +1207,8 @@ export default function DashboardPage() {
                   />
                 )
               )}
+              </>
+              )}
             </>
           )}
 
@@ -1045,7 +1217,20 @@ export default function DashboardPage() {
             <PracticeTestMode
               isPro={isPro}
               onUpgradeClick={() => setShowModal(true)}
+              classes={classes}
             />
+          )}
+
+          {/* ── Calendar ── */}
+          {tab === "calendar" && (
+            classesLoading ? (
+              <CoursesLoadingSkeleton />
+            ) : (
+              <CalendarView
+                classes={classes}
+                onGoToAnalyze={() => setTab("analyze")}
+              />
+            )
           )}
         </main>
       </div>

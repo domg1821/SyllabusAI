@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import * as Sentry from "@sentry/nextjs";
 import {
   TestQuestion,
   MCQuestion,
@@ -7,6 +8,8 @@ import {
   Difficulty,
   QuestionType,
 } from "@/lib/types";
+import { createClient } from "@/lib/supabase/server";
+import { limiters, checkRateLimit, tooManyRequests } from "@/lib/ratelimit";
 
 export const maxDuration = 60;
 
@@ -59,65 +62,150 @@ Additional rules:
 - Questions must be fully self-contained (no "refer to the passage" or "from the table" references)
 - Generate exactly the number of questions requested`;
 
-// ─── Mock Data ─────────────────────────────────────────────────────────────────
+// ─── Contextual Mock Generator ─────────────────────────────────────────────────
 
-const MOCK_QUESTIONS: TestQuestion[] = [
-  {
-    id: "q1",
-    type: "multiple_choice",
-    question: "What is the primary function of RAM in a computer?",
-    options: [
-      "A. Permanently store the operating system",
-      "B. Temporarily store data and instructions the CPU is actively using",
-      "C. Process arithmetic and logic operations",
-      "D. Manage input and output devices",
-    ],
-    correctAnswer: "B",
-    explanation:
-      "RAM (Random Access Memory) is volatile memory that temporarily holds data and program instructions the CPU needs right now. It provides fast access compared to permanent storage.",
-    wrongExplanation:
-      "A is wrong — permanent OS storage is the SSD/HDD's job. C is wrong — that describes the CPU/ALU. D is wrong — that describes the I/O controller or OS.",
-  },
-  {
-    id: "q2",
-    type: "multiple_choice",
-    question: "Which of the following best describes the Von Neumann architecture?",
-    options: [
-      "A. A design where data and instructions are stored in separate memory units",
-      "B. A design where data and program instructions share the same memory and bus",
-      "C. A design that uses parallel processing across multiple CPUs",
-      "D. A design optimized for real-time operating systems",
-    ],
-    correctAnswer: "B",
-    explanation:
-      "Von Neumann architecture stores both data and instructions in the same memory system, accessed over a single shared bus. This simplicity made it the dominant design for general-purpose computers.",
-    wrongExplanation:
-      "A describes Harvard architecture (separate instruction/data memory). C describes multi-core or distributed systems. D is not a defining trait of Von Neumann architecture.",
-  },
-  {
-    id: "q3",
-    type: "short_answer",
-    question:
-      "Explain the difference between a process and a thread in an operating system.",
-    sampleAnswer:
-      "A process is an independent program in execution with its own memory space, file handles, and system resources. A thread is a unit of execution that exists within a process, sharing the process's memory and resources with other threads in the same process. Multiple threads within one process can run concurrently, making them lightweight compared to spawning new processes. The trade-off is that thread errors can corrupt shared memory for all threads, while process isolation prevents one process from crashing another.",
-    explanation:
-      "A strong answer distinguishes resource ownership (process has its own memory; threads share it), explains concurrency benefits of threads, and touches on isolation vs. overhead trade-offs.",
-    keyPoints: [
-      "Process has its own memory space; threads share the parent process's memory",
-      "Threads are lighter weight to create and context-switch than processes",
-      "Threads within a process can communicate directly through shared memory",
-      "A crashing thread can bring down the whole process; a crashing process doesn't affect others",
-    ],
-  },
-];
+function generateMockQuestions(topic: string, count: number, type: QuestionType): TestQuestion[] {
+  const t = topic;
+
+  const mcQuestions: MCQuestion[] = [
+    {
+      id: "q1",
+      type: "multiple_choice",
+      question: `What is the most important reason to study ${t}?`,
+      options: [
+        `A. To build a foundational understanding of core ${t} concepts`,
+        `B. To memorize every definition related to ${t}`,
+        `C. To avoid applying ${t} in unfamiliar situations`,
+        `D. To replace older frameworks with ${t} entirely`,
+      ],
+      correctAnswer: "A",
+      explanation: `Studying ${t} is fundamentally about building conceptual understanding that enables application, analysis, and deeper learning — not rote memorization.`,
+      wrongExplanation: `B focuses on memorization over understanding. C is counterproductive — application is the goal. D oversimplifies how academic fields progress.`,
+    },
+    {
+      id: "q2",
+      type: "multiple_choice",
+      question: `Which approach best supports deep understanding of ${t}?`,
+      options: [
+        `A. Skipping foundational concepts to focus on advanced ${t} topics`,
+        `B. Building from core principles toward more complex applications of ${t}`,
+        `C. Studying ${t} definitions in isolation without applying them`,
+        `D. Avoiding connections between ${t} and related fields`,
+      ],
+      correctAnswer: "B",
+      explanation: `A bottom-up approach — mastering core principles before tackling complexity — consistently leads to stronger retention and application in ${t}.`,
+      wrongExplanation: `A creates gaps that surface later. C is insufficient without practice. D misses how fields reinforce each other.`,
+    },
+    {
+      id: "q3",
+      type: "multiple_choice",
+      question: `When analyzing a problem in ${t}, what should you do first?`,
+      options: [
+        `A. Jump directly to the solution using familiar patterns`,
+        `B. Identify the core question and relevant constraints before solving`,
+        `C. Apply the most complex available technique immediately`,
+        `D. Focus only on what is easiest to calculate or describe`,
+      ],
+      correctAnswer: "B",
+      explanation: `In ${t}, identifying the core question and constraints first prevents wasted effort on the wrong approach and ensures the solution actually addresses the problem.`,
+      wrongExplanation: `A risks missing nuance. C wastes effort when simpler methods suffice. D can lead to incomplete or misleading answers.`,
+    },
+    {
+      id: "q4",
+      type: "multiple_choice",
+      question: `Which statement about ${t} is most accurate?`,
+      options: [
+        `A. ${t} is only relevant in highly specialized academic settings`,
+        `B. ${t} has broad applications that connect to real-world problems`,
+        `C. ${t} can be fully understood from definitions alone`,
+        `D. ${t} requires no prior knowledge to master at an advanced level`,
+      ],
+      correctAnswer: "B",
+      explanation: `Most fields of study, including ${t}, are grounded in practical relevance — connecting abstract concepts to real problems is what makes mastery meaningful.`,
+      wrongExplanation: `A underestimates ${t}'s reach. C ignores that application is essential. D contradicts how knowledge builds over time.`,
+    },
+    {
+      id: "q5",
+      type: "multiple_choice",
+      question: `How should you verify your understanding of a concept in ${t}?`,
+      options: [
+        `A. Re-read the same definition multiple times`,
+        `B. Try to explain the concept in your own words and apply it to a new example`,
+        `C. Accept your first interpretation without testing it`,
+        `D. Only proceed if you can recall the exact wording from the source`,
+      ],
+      correctAnswer: "B",
+      explanation: `Explaining a concept in your own words and applying it to new situations — the Feynman Technique — is one of the most effective ways to confirm and deepen understanding in any subject, including ${t}.`,
+      wrongExplanation: `A is passive learning with low retention. C risks building on faulty assumptions. D confuses memorization with comprehension.`,
+    },
+  ];
+
+  const saQuestions: SAQuestion[] = [
+    {
+      id: "sa1",
+      type: "short_answer",
+      question: `In your own words, explain the key concepts that form the foundation of ${t} and why they matter.`,
+      sampleAnswer: `The foundational concepts of ${t} include its core principles, the frameworks or methods used to study it, and the real-world contexts where it applies. A thorough answer connects these elements and explains how understanding them enables deeper analysis and problem-solving.`,
+      explanation: `A strong response identifies the most fundamental ideas in ${t}, explains them clearly without jargon, and demonstrates understanding by connecting them to applications or consequences.`,
+      keyPoints: [
+        `Define the central focus or question that ${t} addresses`,
+        `Identify 2–3 core principles or methods`,
+        `Explain how these connect to real-world applications`,
+        `Describe what distinguishes ${t} from related fields or approaches`,
+      ],
+    },
+    {
+      id: "sa2",
+      type: "short_answer",
+      question: `Describe a situation where understanding ${t} would lead to a meaningfully better decision or outcome than not knowing it.`,
+      sampleAnswer: `Understanding ${t} allows a decision-maker to recognize patterns, anticipate consequences, and apply proven frameworks where someone without this knowledge might rely on intuition alone. A concrete example would show how ${t} concepts directly influence the approach, execution, or evaluation of a decision.`,
+      explanation: `The best answers are specific — they name a concrete scenario, explain what ${t} contributes, and contrast it with what would happen without that knowledge.`,
+      keyPoints: [
+        `Identify a realistic scenario where ${t} is relevant`,
+        `Explain which concepts from ${t} apply and why`,
+        `Contrast the informed vs. uninformed approach`,
+        `Note any limitations or edge cases in your example`,
+      ],
+    },
+    {
+      id: "sa3",
+      type: "short_answer",
+      question: `What are the most common mistakes students make when first learning ${t}, and how can they be avoided?`,
+      sampleAnswer: `Common mistakes in early study of ${t} include confusing related terms, applying concepts out of context, and focusing on memorization over understanding. These can be avoided by practicing with varied examples, testing comprehension through explanation, and consistently connecting new material to foundational principles.`,
+      explanation: `A strong response reflects genuine metacognitive awareness — not just listing mistakes but explaining the underlying reason each one occurs and offering a concrete corrective strategy.`,
+      keyPoints: [
+        `Identify at least two specific misconceptions or errors`,
+        `Explain why each mistake happens (root cause)`,
+        `Suggest a concrete strategy to avoid or correct each`,
+        `Connect good habits to long-term mastery of ${t}`,
+      ],
+    },
+  ];
+
+  let pool: TestQuestion[];
+  if (type === "short_answer") {
+    pool = saQuestions;
+  } else if (type === "multiple_choice") {
+    pool = mcQuestions;
+  } else {
+    // mixed: interleave MC and SA
+    pool = [];
+    const maxLen = Math.max(mcQuestions.length, saQuestions.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (i < mcQuestions.length) pool.push(mcQuestions[i]);
+      if (i < saQuestions.length) pool.push(saQuestions[i]);
+    }
+  }
+
+  return pool.slice(0, count).map((q, i) => ({ ...q, id: `q${i + 1}` }));
+}
 
 // ─── Sanitizer ─────────────────────────────────────────────────────────────────
 
 const VALID_ANSWERS = new Set(["A", "B", "C", "D"]);
 
 function sanitizeQuestions(raw: unknown): TestQuestion[] {
-  if (!Array.isArray(raw)) return MOCK_QUESTIONS;
+  if (!Array.isArray(raw)) return [];
 
   return raw
     .map((item: unknown, i: number): TestQuestion | null => {
@@ -174,6 +262,14 @@ function extractJson(text: string): string {
 // ─── Route Handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  // Rate limit authenticated users at 20 requests/hour
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const check = await checkRateLimit(limiters.practiceTest, `user:${user.id}`);
+    if (check.blocked) return tooManyRequests(check.reset, "hour");
+  }
+
   let topic: string;
   let questionCount: number;
   let questionType: QuestionType;
@@ -206,7 +302,7 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json({
-      data: { questions: MOCK_QUESTIONS.slice(0, questionCount) },
+      data: { questions: generateMockQuestions(topic, questionCount, questionType) },
       mock: true,
     });
   }
@@ -241,11 +337,32 @@ Return ONLY a valid JSON object with a "questions" array containing exactly ${qu
 
     const rawText =
       response.content[0].type === "text" ? response.content[0].text : "";
-    const jsonStr = extractJson(rawText);
-    const parsed = JSON.parse(jsonStr);
-    const questions = sanitizeQuestions(
-      Array.isArray(parsed.questions) ? parsed.questions : parsed
-    );
+
+    let questions;
+    try {
+      const jsonStr = extractJson(rawText);
+      const parsed = JSON.parse(jsonStr);
+      questions = sanitizeQuestions(
+        Array.isArray(parsed.questions) ? parsed.questions : parsed
+      );
+    } catch (parseError) {
+      console.error("[practice-test] Failed to parse model response:", parseError);
+      Sentry.withScope((scope) => {
+        scope.setTag("route", "practice-test");
+        scope.setContext("claude_response", {
+          rawTextPreview: rawText.slice(0, 1000),
+          topic,
+          questionCount,
+          questionType,
+          difficulty,
+        });
+        Sentry.captureException(parseError);
+      });
+      return NextResponse.json(
+        { error: "Failed to generate questions. Please try again." },
+        { status: 500 }
+      );
+    }
 
     if (questions.length === 0) {
       return NextResponse.json(
@@ -257,6 +374,11 @@ Return ONLY a valid JSON object with a "questions" array containing exactly ${qu
     return NextResponse.json({ data: { questions }, mock: false });
   } catch (err) {
     console.error("[practice-test] Claude API error:", err);
+    Sentry.withScope((scope) => {
+      scope.setTag("route", "practice-test");
+      scope.setContext("request", { topic, questionCount, questionType, difficulty });
+      Sentry.captureException(err);
+    });
     return NextResponse.json(
       { error: "Failed to generate test. Please try again." },
       { status: 500 }

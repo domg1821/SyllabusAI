@@ -7,6 +7,7 @@ import {
   TestQuestion,
   TestAttempt,
   MCQuestion,
+  SavedClass,
 } from "@/lib/types";
 import { usePracticeTests } from "@/lib/usePracticeTests";
 import PracticeTestSetup from "./PracticeTestSetup";
@@ -19,15 +20,17 @@ type View = "setup" | "exam" | "results" | "history" | "history_review";
 interface Props {
   isPro: boolean;
   onUpgradeClick: () => void;
+  classes?: SavedClass[];
 }
 
-export default function PracticeTestMode({ isPro, onUpgradeClick }: Props) {
+export default function PracticeTestMode({ isPro, onUpgradeClick, classes }: Props) {
   const {
     visibleHistory,
     canTakeTest,
     remainingFreeTests,
     weeklyCount,
     saveAttempt,
+    weakTopics,
   } = usePracticeTests(isPro);
 
   const [view, setView] = useState<View>("setup");
@@ -102,7 +105,7 @@ export default function PracticeTestMode({ isPro, onUpgradeClick }: Props) {
       mcCount > 0 ? Math.round((correctCount / mcCount) * 100) : -1;
 
     const attempt: TestAttempt = {
-      id: `attempt-${Date.now()}`,
+      id: crypto.randomUUID(),
       topic: currentTopic,
       difficulty: currentDifficulty,
       questionType: currentQuestionType,
@@ -150,6 +153,8 @@ export default function PracticeTestMode({ isPro, onUpgradeClick }: Props) {
           onGenerate={handleGenerate}
           onViewHistory={() => setView("history")}
           onUpgradeClick={onUpgradeClick}
+          classes={classes}
+          weakTopics={weakTopics}
         />
       )}
 

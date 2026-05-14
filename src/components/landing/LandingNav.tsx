@@ -32,8 +32,11 @@ export default function LandingNav() {
             Features
           </a>
           <a href="#how-it-works" className="hover:text-gray-900 transition-colors">
-            How it works
+            How It Works
           </a>
+          <Link href="/pricing" className="hover:text-gray-900 transition-colors">
+            Pricing
+          </Link>
         </nav>
 
         {/* Actions */}
@@ -42,13 +45,13 @@ export default function LandingNav() {
             href="/sign-in"
             className="hidden text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors sm:block"
           >
-            Sign in
+            Log In
           </Link>
           <Link
             href="/sign-up"
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors"
           >
-            Get Started
+            Get Started Free
           </Link>
         </div>
       </div>

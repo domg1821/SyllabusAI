@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { PRO_PRICE_MONTHLY } from "@/lib/constants";
 // ─── Pro Badge ─────────────────────────────────────────────────────────────────
 
 export function ProBadge({ className = "" }: { className?: string }) {
@@ -182,7 +183,7 @@ export default function UpgradeModal({ open, onClose }: Props) {
           {/* Pricing */}
           <div className="mb-6 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-5 text-center ring-1 ring-indigo-100">
             <div className="flex items-baseline justify-center gap-1">
-              <span className="text-4xl font-extrabold text-gray-900">$5</span>
+              <span className="text-4xl font-extrabold text-gray-900">${PRO_PRICE_MONTHLY}</span>
               <span className="text-base text-gray-500">/ month</span>
             </div>
             <p className="mt-1 text-xs font-semibold text-indigo-600 uppercase tracking-wide">
@@ -232,7 +233,7 @@ export default function UpgradeModal({ open, onClose }: Props) {
                 Redirecting to checkout…
               </>
             ) : (
-              "Upgrade to Pro — $5/month"
+              `Upgrade to Pro — $${PRO_PRICE_MONTHLY}/month`
             )}
           </button>
           <p className="mt-3 text-center text-xs text-gray-400">

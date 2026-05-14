@@ -30,8 +30,8 @@ export default function Footer() {
             <a href="#features" className="hover:text-gray-900 transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-gray-900 transition-colors">How it works</a>
             <Link href="/sign-up" className="hover:text-gray-900 transition-colors">Get started</Link>
-            <a href="#" className="hover:text-gray-900 transition-colors">Privacy</a>
-            <a href="#" className="hover:text-gray-900 transition-colors">Terms</a>
+            <Link href="/legal/privacy" className="hover:text-gray-900 transition-colors">Privacy</Link>
+            <Link href="/legal/terms" className="hover:text-gray-900 transition-colors">Terms</Link>
           </nav>
 
           <p className="text-xs text-gray-400">

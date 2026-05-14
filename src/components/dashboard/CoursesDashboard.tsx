@@ -220,13 +220,19 @@ export default function CoursesDashboard({
                         <p className="text-sm text-gray-400">No study plan available.</p>
                       ) : (
                         <div className="space-y-3">
-                          {cls.studyPlan.map((week) => (
-                            <StudyWeekCard
-                              key={week.id}
-                              week={week}
-                              onToggleTask={(weekId, taskId) => onToggleTask(cls.id, weekId, taskId)}
-                            />
-                          ))}
+                          {cls.studyPlan.map((week) => {
+                            const wn = week.weekLabel.match(/Week\s+(\d+)/i)?.[1];
+                            const wt = wn ? cls.weeklyTopics?.find((t) => t.week === parseInt(wn)) : undefined;
+                            return (
+                              <StudyWeekCard
+                                key={week.id}
+                                week={week}
+                                onToggleTask={(weekId, taskId) => onToggleTask(cls.id, weekId, taskId)}
+                                weekTopic={wt?.topic}
+                                weekChapters={wt?.chapters}
+                              />
+                            );
+                          })}
                         </div>
                       )
                     ) : (

@@ -6,7 +6,24 @@
       "Bash(echo \"EXIT:$?\")",
       "Bash(npm run:*)",
       "Bash(echo \"BUILD_EXIT:$?\")",
-      "Bash(node -e \"const s = require\\('c:/Users/21Dom/Documents/syllabus-ai/node_modules/stripe'\\); const inst = new s.default\\('sk_test_x'\\); console.log\\(inst._apiVersion || inst.VERSION || 'no-version'\\);\")"
+      "Bash(node -e \"const s = require\\('c:/Users/21Dom/Documents/syllabus-ai/node_modules/stripe'\\); const inst = new s.default\\('sk_test_x'\\); console.log\\(inst._apiVersion || inst.VERSION || 'no-version'\\);\")",
+      "Bash(npm install *)",
+      "Bash(npm test *)",
+      "Bash(node -e \"const p = require\\('./node_modules/@supabase/postgrest-js/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/@supabase/supabase-js/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/@supabase/ssr/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(npx next *)",
+      "Bash(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\21Dom\\\\Documents\\\\syllabus-ai\\\\src\\\\app\\\\api\\\\account\")",
+      "Bash(Out-Null)",
+      "Bash(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\21Dom\\\\Documents\\\\syllabus-ai\\\\src\\\\app\\\\api\\\\account\\\\delete\")",
+      "Bash(node -e \"require\\('@upstash/ratelimit'\\); require\\('@upstash/redis'\\); console.log\\('ok'\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).dependencies['next']\\)\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\({typescript: p.devDependencies?.typescript, tsconfig: 'see file'}\\)\\)\")",
+      "Bash(node -e \"console.log\\(require\\('@sentry/nextjs/package.json'\\).version\\)\")",
+      "Bash(xargs grep -l \"SentryBuildOptions\\\\|withSentryConfig\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('tailwind:', p.dependencies?.tailwindcss || p.devDependencies?.tailwindcss\\); console.log\\('next:', p.dependencies?.next\\)\")",
+      "Bash(Get-Content \"c:\\\\Users\\\\21Dom\\\\Documents\\\\syllabus-ai\\\\node_modules\\\\tailwindcss\\\\README.md\" -TotalCount 60)"
     ]
   }
 }

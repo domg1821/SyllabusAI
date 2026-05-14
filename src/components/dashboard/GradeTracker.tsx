@@ -2,6 +2,12 @@
 
 import React, { useState } from "react";
 import { DeadlineItem, GradeEntry, ItemType } from "@/lib/types";
+import {
+  calcGradeImpact,
+  GRADE_THRESHOLDS,
+  fmtPts,
+  fmtPct,
+} from "@/lib/gradeUtils";
 
 interface Props {
   items: DeadlineItem[];
@@ -23,6 +29,7 @@ export default function GradeTracker({ items, grades, onSetGrade, onRemoveGrade 
   const [editing, setEditing] = useState<string | null>(null);
   const [earnedInput, setEarnedInput] = useState("");
   const [maxInput, setMaxInput] = useState("");
+  const [targetLabel, setTargetLabel] = useState("B");
 
   const gradeMap = new Map(grades.map((g) => [g.itemId, g]));
 
@@ -120,17 +127,102 @@ export default function GradeTracker({ items, grades, onSetGrade, onRemoveGrade 
             <div className="text-xs text-gray-500">Current grade</div>
             <div className="text-xs text-gray-400">{currentPct.toFixed(1)}%</div>
           </div>
-          {projectedPct !== null && (
+          {projectedPct !== null && ungradedPoints > 0 && (
             <div className="rounded-lg bg-gray-50 p-3 text-center">
               <div className={`text-2xl font-bold ${gradeColor(projectedPct)}`}>
                 {letterGrade(projectedPct)}
               </div>
               <div className="text-xs text-gray-500">Projected final</div>
-              <div className="text-xs text-gray-400">{projectedPct.toFixed(1)}%</div>
+              <div className="text-xs text-gray-400">{projectedPct.toFixed(1)}% · if 100% on remaining</div>
+            </div>
+          )}
+          {ungradedPoints === 0 && gradedItems.length > 0 && (
+            <div className="rounded-lg bg-emerald-50 p-3 text-center">
+              <div className="text-2xl font-bold text-emerald-600">✓</div>
+              <div className="text-xs text-gray-500">All items graded</div>
+              <div className="text-xs text-gray-400">Final: {currentPct.toFixed(1)}%</div>
             </div>
           )}
         </div>
       )}
+
+      {/* Grade impact calculator */}
+      {(() => {
+        const targetThreshold = GRADE_THRESHOLDS.find((t) => t.label === targetLabel);
+        const targetPct = targetThreshold?.pct ?? 83;
+        const impact = calcGradeImpact({
+          targetPct,
+          totalEarned,
+          totalPossible,
+          ungradedPoints,
+        });
+
+        return (
+          <div className="mb-4 border-t border-gray-100 pt-4">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-600">What score do I need?</span>
+              <select
+                value={targetLabel}
+                onChange={(e) => setTargetLabel(e.target.value)}
+                className="ml-auto rounded border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 focus:border-indigo-400 focus:outline-none"
+              >
+                {GRADE_THRESHOLDS.filter((t) => t.label !== "F").map((t) => (
+                  <option key={t.label} value={t.label}>
+                    {t.label} ({t.pct}%+)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {impact.status === "no_data" && (
+              <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-400">
+                Enter grades above to see what score you need.
+              </p>
+            )}
+
+            {impact.status === "secured" && (
+              <div className="flex items-start gap-2 rounded-lg bg-emerald-50 px-3 py-2">
+                <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+                <p className="text-xs text-emerald-700">
+                  You&apos;ve already secured at least a{" "}
+                  <span className="font-semibold">{targetLabel}</span> based on your current scores.
+                </p>
+              </div>
+            )}
+
+            {impact.status === "achievable" && (
+              <div className="flex items-start gap-2 rounded-lg bg-indigo-50 px-3 py-2">
+                <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+                </svg>
+                <p className="text-xs text-indigo-700">
+                  You need{" "}
+                  <span className="font-semibold">
+                    {fmtPts(impact.neededPoints)}/{fmtPts(impact.ungradedPoints)} ({fmtPct(impact.neededPct)})
+                  </span>{" "}
+                  on your remaining work to finish with a{" "}
+                  <span className="font-semibold">{targetLabel}</span>.
+                </p>
+              </div>
+            )}
+
+            {impact.status === "impossible" && (
+              <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2">
+                <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+                <p className="text-xs text-amber-700">
+                  Even a perfect score on remaining work would only reach{" "}
+                  <span className="font-semibold">{fmtPct(impact.bestPossiblePct)}</span>, not a{" "}
+                  <span className="font-semibold">{targetLabel}</span>.
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Per-item grade entry */}
       <div className="space-y-5">

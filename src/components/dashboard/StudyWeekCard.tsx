@@ -6,6 +6,8 @@ import { StudyWeek } from "@/lib/types";
 interface Props {
   week: StudyWeek;
   onToggleTask: (weekId: string, taskId: string) => void;
+  weekTopic?: string;
+  weekChapters?: string;
 }
 
 const dayColor: Record<string, string> = {
@@ -25,23 +27,31 @@ function formatMinutes(mins: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-export default function StudyWeekCard({ week, onToggleTask }: Props) {
+export default function StudyWeekCard({ week, onToggleTask, weekTopic, weekChapters }: Props) {
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const completedCount = week.tasks.filter((t) => t.completed).length;
   const totalCount = week.tasks.length;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-5 py-3">
-        <h3 className="text-sm font-semibold text-gray-700">{week.weekLabel}</h3>
-        <span className="text-xs font-medium text-gray-400">
-          {completedCount}/{totalCount} done
-        </span>
+      <div className="border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-5 py-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-200">{week.weekLabel}</h3>
+          <span className="text-xs font-medium text-gray-400 dark:text-slate-500">
+            {completedCount}/{totalCount} done
+          </span>
+        </div>
+        {weekTopic && (
+          <p className="mt-0.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+            {weekTopic}
+            {weekChapters && <span className="ml-1 font-normal text-gray-400 dark:text-slate-500">· {weekChapters}</span>}
+          </p>
+        )}
       </div>
 
       {/* Tasks */}
-      <div className="divide-y divide-gray-50">
+      <div className="divide-y divide-gray-50 dark:divide-slate-700/50">
         {week.tasks.map((task) => {
           const isExpanded = expandedTaskId === task.id;
           const hasNotes = Boolean(task.notes?.trim());
@@ -60,7 +70,7 @@ export default function StudyWeekCard({ week, onToggleTask }: Props) {
                   className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${
                     task.completed
                       ? "border-emerald-500 bg-emerald-500"
-                      : "border-gray-300 hover:border-emerald-400"
+                      : "border-gray-300 dark:border-slate-600 hover:border-emerald-400"
                   }`}
                 >
                   {task.completed && (
@@ -88,14 +98,14 @@ export default function StudyWeekCard({ week, onToggleTask }: Props) {
                     </span>
                     {task.date && (
                       <>
-                        <span className="text-xs text-gray-300">·</span>
-                        <span className="text-xs text-gray-400">{task.date}</span>
+                        <span className="text-xs text-gray-300 dark:text-slate-600">·</span>
+                        <span className="text-xs text-gray-400 dark:text-slate-500">{task.date}</span>
                       </>
                     )}
                     {task.estimatedMinutes && (
                       <>
-                        <span className="text-xs text-gray-300">·</span>
-                        <span className="text-xs text-gray-400">{formatMinutes(task.estimatedMinutes)}</span>
+                        <span className="text-xs text-gray-300 dark:text-slate-600">·</span>
+                        <span className="text-xs text-gray-400 dark:text-slate-500">{formatMinutes(task.estimatedMinutes)}</span>
                       </>
                     )}
                   </div>
@@ -103,7 +113,7 @@ export default function StudyWeekCard({ week, onToggleTask }: Props) {
                   {/* Description */}
                   <p
                     className={`mt-0.5 text-sm leading-relaxed ${
-                      task.completed ? "text-gray-400 line-through" : "text-gray-700"
+                      task.completed ? "text-gray-400 dark:text-slate-600 line-through" : "text-gray-700 dark:text-slate-200"
                     }`}
                   >
                     {task.description}
@@ -111,7 +121,7 @@ export default function StudyWeekCard({ week, onToggleTask }: Props) {
 
                   {/* Related item tag */}
                   {task.relatedItem && (
-                    <p className="mt-1.5 text-xs font-medium text-indigo-500">
+                    <p className="mt-1.5 text-xs font-medium text-indigo-500 dark:text-indigo-400">
                       {task.relatedItem}
                     </p>
                   )}
@@ -121,7 +131,7 @@ export default function StudyWeekCard({ week, onToggleTask }: Props) {
                 {hasNotes && (
                   <button
                     onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
-                    className="mt-0.5 shrink-0 rounded-full p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-500 transition-colors"
+                    className="mt-0.5 shrink-0 rounded-full p-1 text-gray-300 dark:text-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-500 dark:hover:text-slate-300 transition-colors"
                     title={isExpanded ? "Hide tip" : "Show study tip"}
                     aria-label={isExpanded ? "Collapse" : "Expand"}
                   >
@@ -140,7 +150,7 @@ export default function StudyWeekCard({ week, onToggleTask }: Props) {
 
               {/* Expanded notes */}
               {isExpanded && hasNotes && (
-                <div className="mx-5 mb-4 flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5">
+                <div className="mx-5 mb-4 flex items-start gap-2 rounded-lg border border-amber-100 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5">
                   <svg
                     className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500"
                     fill="none"
@@ -154,7 +164,7 @@ export default function StudyWeekCard({ week, onToggleTask }: Props) {
                       d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"
                     />
                   </svg>
-                  <p className="text-xs leading-relaxed text-amber-800">{task.notes}</p>
+                  <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-300">{task.notes}</p>
                 </div>
               )}
             </div>

@@ -105,7 +105,7 @@ export interface TestAttempt {
   userAnswers: Record<string, string>;
 }
 
-export type DashboardTab = "syllabus" | "assignment" | "practice" | "courses" | "week";
+export type DashboardTab = "week" | "courses" | "analyze" | "practice" | "calendar";
 
 // ─── Multi-class types ─────────────────────────────────────────────────────────
 
@@ -125,4 +125,5 @@ export interface SavedClass {
   studyPlan: StudyWeek[];
   grades: GradeEntry[];
   weeklyTopics?: WeeklyTopic[];
+  rawText?: string;      // original syllabus text — used for Phase 8 rescan
 }

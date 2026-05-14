@@ -4,11 +4,17 @@ import { useState, useRef, DragEvent, ChangeEvent } from "react";
 
 type Tab = "paste" | "upload";
 
-export default function SyllabusUploader() {
+interface Props {
+  onExtracted?: (text: string) => void;
+}
+
+export default function SyllabusUploader({ onExtracted }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("paste");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleDragOver(e: DragEvent<HTMLDivElement>) {
@@ -24,15 +30,49 @@ export default function SyllabusUploader() {
     e.preventDefault();
     setIsDragging(false);
     const dropped = e.dataTransfer.files[0];
-    if (dropped) setFile(dropped);
+    if (dropped) { setFile(dropped); setError(null); }
   }
 
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
-    if (selected) setFile(selected);
+    if (selected) { setFile(selected); setError(null); }
   }
 
-  const canSubmit = activeTab === "paste" ? text.trim().length > 20 : file !== null;
+  async function handleSubmit() {
+    setError(null);
+
+    if (activeTab === "paste") {
+      const trimmed = text.trim();
+      if (trimmed.length > 20) onExtracted?.(trimmed);
+      return;
+    }
+
+    if (!file) return;
+    setLoading(true);
+
+    try {
+      const form = new FormData();
+      form.append("file", file);
+
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const json = await res.json();
+
+      if (!res.ok) {
+        setError(json.error ?? "Upload failed. Please try again.");
+        return;
+      }
+
+      onExtracted?.(json.text as string);
+    } catch {
+      setError("Network error. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const canSubmit = !loading && (
+    activeTab === "paste" ? text.trim().length > 20 : file !== null
+  );
 
   return (
     <section id="upload" className="py-24 bg-white">
@@ -55,7 +95,7 @@ export default function SyllabusUploader() {
             {(["paste", "upload"] as Tab[]).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => { setActiveTab(tab); setError(null); }}
                 className={`flex-1 py-4 text-sm font-semibold transition-colors ${
                   activeTab === tab
                     ? "border-b-2 border-indigo-600 text-indigo-600"
@@ -91,7 +131,7 @@ export default function SyllabusUploader() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".pdf,.doc,.docx,.txt"
+                  accept=".pdf,.doc,.docx,.txt,image/png,image/jpeg,image/webp"
                   className="hidden"
                   onChange={handleFileChange}
                 />
@@ -111,17 +151,34 @@ export default function SyllabusUploader() {
                       Drop your file here, or{" "}
                       <span className="text-indigo-600">browse</span>
                     </p>
-                    <p className="mt-1 text-sm text-gray-400">PDF, DOCX, or TXT — up to 10 MB</p>
+                    <p className="mt-1 text-sm text-gray-400">PDF, DOCX, image, or TXT — up to 10 MB</p>
                   </div>
                 )}
               </div>
             )}
 
+            {error && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
             <button
+              onClick={handleSubmit}
               disabled={!canSubmit}
-              className="mt-5 w-full rounded-xl bg-indigo-600 py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-indigo-600"
+              className="mt-5 w-full rounded-xl bg-indigo-600 py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-indigo-600 flex items-center justify-center gap-2"
             >
-              Extract deadlines & build study plan
+              {loading ? (
+                <>
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Extracting text…
+                </>
+              ) : (
+                "Extract deadlines & build study plan"
+              )}
             </button>
 
             <p className="mt-3 text-center text-xs text-gray-400">

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import * as Sentry from "@sentry/nextjs";
+import { createClient } from "@/lib/supabase/server";
+import { FREE_LIMIT } from "@/lib/constants";
 import { mockAnalysis, mockAssignmentAnalysis } from "@/lib/mockData";
+import { limiters, checkRateLimit, tooManyRequests, clientIp } from "@/lib/ratelimit";
 import {
   SyllabusAnalysis,
   AssignmentAnalysis,
@@ -311,6 +315,67 @@ function parseModelJson(rawText: string): unknown {
 // ─── Route Handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  // ─── Auth ──────────────────────────────────────────────────────────────────
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    // IP-based rate limit for unauthenticated callers (3/hour)
+    const ip = clientIp(req);
+    const ipCheck = await checkRateLimit(limiters.analyzeIp, `anon:${ip}`);
+    if (ipCheck.blocked) return tooManyRequests(ipCheck.reset, "hour");
+    return NextResponse.json(
+      { error: "Sign in to analyze syllabi and assignments." },
+      { status: 401 }
+    );
+  }
+
+  // Per-user rate limits: 10/hour and 50/day
+  const hourlyCheck = await checkRateLimit(limiters.analyzeHourly, `user:${user.id}`);
+  if (hourlyCheck.blocked) return tooManyRequests(hourlyCheck.reset, "hour");
+
+  const dailyCheck = await checkRateLimit(limiters.analyzeDaily, `user:${user.id}`);
+  if (dailyCheck.blocked) return tooManyRequests(dailyCheck.reset, "day");
+
+  // ─── Free-tier quota ───────────────────────────────────────────────────────
+  let { data: profile } = await supabase
+    .from("profiles")
+    .select("is_pro, analysis_count")
+    .eq("id", user.id)
+    .single();
+
+  // Auto-create profile row for users who pre-date the handle_new_user trigger.
+  if (!profile) {
+    await supabase
+      .from("profiles")
+      .upsert({ id: user.id, is_pro: false, analysis_count: 0 });
+    profile = { is_pro: false, analysis_count: 0 };
+  }
+
+  const isPro = profile.is_pro ?? false;
+  const analysisCount = profile.analysis_count ?? 0;
+
+  if (!isPro && analysisCount >= FREE_LIMIT) {
+    return NextResponse.json(
+      { error: "You've used all 3 free analyses. Upgrade to Pro for unlimited access." },
+      { status: 403 }
+    );
+  }
+
+  // Increments the DB count after a successful analysis.
+  // Not called on parse/API errors so failures don't consume quota.
+  async function markUsed() {
+    if (isPro) return;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ analysis_count: analysisCount + 1 })
+      .eq("id", user!.id);
+    if (error) console.error("[analyze] count increment failed:", error.message);
+  }
+
+  // ─── Parse request ─────────────────────────────────────────────────────────
   let text: string;
   let mode: AnalysisMode;
 
@@ -326,12 +391,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No text provided." }, { status: 400 });
   }
 
+  // ─── Mock path (no API key) ────────────────────────────────────────────────
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     const mockData = mode === "assignment" ? mockAssignmentAnalysis : mockAnalysis;
+    await markUsed();
     return NextResponse.json({ data: mockData, mock: true });
   }
 
+  // ─── Real path ─────────────────────────────────────────────────────────────
   try {
     const client = new Anthropic({ apiKey });
     const preparedText = mode === "syllabus" ? text.trim().slice(0, 6000) : text.trim();
@@ -344,10 +412,10 @@ export async function POST(req: NextRequest) {
         ? `Decode this assignment and return structured JSON:\n\n${preparedText}`
         : `Parse this syllabus and return structured JSON:\n\n${preparedText}`;
 
-    console.log(`[analyze] mode=${mode} inputLength=${preparedText.length}`);
+    console.log(`[analyze] mode=${mode} inputLength=${preparedText.length} userId=${user.id}`);
 
     const response = await client.messages.create({
-      model: "claude-3-5-sonnet",
+      model: "claude-sonnet-4-6",
       max_tokens: 8192,
       system: systemPrompt,
       messages: [{ role: "user", content: userContent }],
@@ -369,6 +437,19 @@ export async function POST(req: NextRequest) {
         parseError instanceof Error ? parseError.message : String(parseError)
       );
       console.error("[analyze] Raw model response:", rawText);
+
+      Sentry.withScope((scope) => {
+        scope.setTag("route", "analyze");
+        scope.setTag("analysis.mode", mode);
+        scope.setContext("claude_response", {
+          rawTextPreview: rawText.slice(0, 1000),
+          rawTextLength: rawText.length,
+          inputLength: preparedText.length,
+        });
+        scope.setUser({ id: user.id });
+        Sentry.captureException(parseError);
+      });
+
       return NextResponse.json(
         {
           error:
@@ -385,12 +466,19 @@ export async function POST(req: NextRequest) {
         ? sanitizeAssignmentAnalysis(parsed)
         : sanitizeSyllabusAnalysis(parsed);
 
+    await markUsed();
     return NextResponse.json({ data, mock: false });
   } catch (err) {
     console.error(
       "[analyze] Claude API error:",
       err instanceof Error ? err.message : String(err)
     );
+    Sentry.withScope((scope) => {
+      scope.setTag("route", "analyze");
+      scope.setTag("analysis.mode", mode);
+      scope.setUser({ id: user.id });
+      Sentry.captureException(err);
+    });
     return NextResponse.json(
       {
         error:

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Difficulty, QuestionType } from "@/lib/types";
+import { Difficulty, QuestionType, SavedClass } from "@/lib/types";
 import {
   FREE_WEEKLY_LIMIT,
   FREE_MAX_QUESTIONS,
@@ -23,6 +23,8 @@ interface Props {
   }) => void;
   onViewHistory: () => void;
   onUpgradeClick: () => void;
+  classes?: SavedClass[];
+  weakTopics?: string[];
 }
 
 const QUESTION_TYPES: { value: QuestionType; label: string; desc: string }[] = [
@@ -46,6 +48,14 @@ const ACCEPTED_IMAGE_TYPES: Record<string, string> = {
 
 const MAX_FILE_SIZE_MB = 10;
 
+function getClassTopicFill(cls: SavedClass): string {
+  if (cls.weeklyTopics && cls.weeklyTopics.length > 0) {
+    const topics = cls.weeklyTopics.map((t) => t.topic).join(", ");
+    return `${cls.name}: ${topics}`;
+  }
+  return cls.name;
+}
+
 export default function PracticeTestSetup({
   isPro,
   canTakeTest,
@@ -56,6 +66,8 @@ export default function PracticeTestSetup({
   onGenerate,
   onViewHistory,
   onUpgradeClick,
+  classes,
+  weakTopics,
 }: Props) {
   const [topic, setTopic] = useState("");
   const maxQ = isPro ? PRO_MAX_QUESTIONS : FREE_MAX_QUESTIONS;
@@ -195,6 +207,43 @@ export default function PracticeTestSetup({
               />
             </label>
           </div>
+
+          {/* Weak topics — shown when user has struggled on past tests */}
+          {weakTopics && weakTopics.length > 0 && (
+            <div className="mb-2 flex flex-wrap items-center gap-1.5">
+              <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                </svg>
+                Review weak areas:
+              </span>
+              {weakTopics.map((wt) => (
+                <button
+                  key={wt}
+                  onClick={() => setTopic(wt)}
+                  className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors"
+                >
+                  {wt.length > 40 ? wt.slice(0, 40) + "…" : wt}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Class quick-picks — shown only when saved courses exist */}
+          {classes && classes.length > 0 && (
+            <div className="mb-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-gray-400">From your courses:</span>
+              {classes.slice(0, 5).map((cls) => (
+                <button
+                  key={cls.id}
+                  onClick={() => setTopic(getClassTopicFill(cls))}
+                  className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+                >
+                  {cls.code || cls.name.split(" ").slice(0, 2).join(" ")}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Image preview + status row */}
           {(imagePreview || imageError) && (

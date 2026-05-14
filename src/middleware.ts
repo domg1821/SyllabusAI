@@ -32,13 +32,17 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  const authPages = ["/sign-in", "/sign-up", "/forgot-password", "/reset-password"];
+  const protectedPrefixes = ["/dashboard", "/settings", "/account"];
+
   // Redirect authenticated users away from auth pages
-  if (user && (pathname === "/sign-in" || pathname === "/sign-up")) {
+  if (user && authPages.includes(pathname)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Protect dashboard — redirect unauthenticated users to sign-in
-  if (!user && pathname.startsWith("/dashboard")) {
+  // Protect dashboard, settings, and account — redirect unauthenticated users to sign-in
+  // Exception: /reset-password is public because the user arrives unauthenticated
+  if (!user && protectedPrefixes.some((p) => pathname.startsWith(p))) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
 
