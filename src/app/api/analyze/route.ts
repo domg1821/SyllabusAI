@@ -350,6 +350,21 @@ function parseModelJson(rawText: string): unknown {
 // ─── Route Handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  // Top-level guard: any throw that escapes inner handlers (auth, DB, rate-limit,
+  // unexpected SDK behaviour) is caught here so the client always gets valid JSON.
+  try {
+    return await handlePost(req);
+  } catch (err) {
+    console.error("[analyze] Unhandled error:", err);
+    Sentry.captureException(err);
+    return Response.json(
+      { error: "Internal server error: " + String(err) },
+      { status: 500 }
+    );
+  }
+}
+
+async function handlePost(req: NextRequest) {
   // ─── Auth ──────────────────────────────────────────────────────────────────
   const supabase = await createClient();
   const {
