@@ -419,11 +419,11 @@ async function handlePost(req: NextRequest) {
     let parsed: unknown;
 
     try {
-      // Strip any leading preamble text before the JSON object begins.
-      // Haiku sometimes prefixes with "Here is the JSON:" or similar.
-      const jsonStart = rawText.indexOf("{");
-      const stripped = jsonStart > 0 ? rawText.slice(jsonStart) : rawText;
-      parsed = parseModelJson(stripped);
+      let cleaned = rawText.trim();
+      if (cleaned.startsWith("```")) {
+        cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+      }
+      parsed = parseModelJson(cleaned);
     } catch (parseError) {
       console.error(
         "[analyze] Failed to parse model response:",

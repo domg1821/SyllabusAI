@@ -314,7 +314,11 @@ Return ONLY a valid JSON object with a "questions" array containing exactly ${qu
 
     let questions;
     try {
-      const jsonStr = extractJson(rawText);
+      let cleaned = rawText.trim();
+      if (cleaned.startsWith("```")) {
+        cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+      }
+      const jsonStr = extractJson(cleaned);
       const parsed = JSON.parse(jsonStr);
       questions = sanitizeQuestions(
         Array.isArray(parsed.questions) ? parsed.questions : parsed
