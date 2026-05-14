@@ -1,5 +1,6 @@
 export type ItemType = "assignment" | "quiz" | "exam" | "project";
 export type Priority = "low" | "medium" | "high";
+export type SubmissionStatus = "not_started" | "in_progress" | "submitted" | "graded";
 
 export interface DeadlineItem {
   id: string;
@@ -9,6 +10,7 @@ export interface DeadlineItem {
   points?: number;
   priority: Priority;
   completed: boolean;
+  status?: SubmissionStatus;
 }
 
 export interface CourseInfo {

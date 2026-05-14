@@ -12,6 +12,7 @@ import {
   GradeEntry,
   ItemType,
   StudyWeek,
+  SubmissionStatus,
   WeeklyTopic,
 } from "@/lib/types";
 import { usePro, FREE_LIMIT } from "@/lib/usePro";
@@ -23,6 +24,7 @@ import AssignmentResultView from "@/components/dashboard/AssignmentResultView";
 import UpgradeModal, { LockedFeatureCard } from "@/components/dashboard/UpgradeModal";
 import PracticeTestMode from "@/components/dashboard/PracticeTestMode";
 import CoursesDashboard from "@/components/dashboard/CoursesDashboard";
+import OnboardingModal from "@/components/dashboard/OnboardingModal";
 import ThisWeekView from "@/components/dashboard/ThisWeekView";
 import GradeTracker from "@/components/dashboard/GradeTracker";
 import CalendarView from "@/components/dashboard/CalendarView";
@@ -157,21 +159,28 @@ function ModeToggle({
   onChange: (t: DashboardTab) => void;
 }) {
   return (
-    <div className="inline-flex flex-wrap justify-center gap-1 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 p-1">
-      {TAB_CONFIG.map(({ value, label, icon }) => (
-        <button
-          key={value}
-          onClick={() => onChange(value)}
-          className={`relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
-            tab === value
-              ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 shadow-sm"
-              : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
-          }`}
-        >
-          {icon}
-          {label}
-        </button>
-      ))}
+    <div className="relative w-full max-w-2xl">
+      {/* overflow-x-auto for mobile; scrollbar hidden via inline style */}
+      <div className="overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+        <div className="inline-flex gap-1 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 p-1 min-w-max">
+          {TAB_CONFIG.map(({ value, label, icon }) => (
+            <button
+              key={value}
+              onClick={() => onChange(value)}
+              className={`relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                tab === value
+                  ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 shadow-sm"
+                  : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
+              }`}
+            >
+              {icon}
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* Fade hint indicating more tabs to the right on small screens */}
+      <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-gray-50 dark:from-slate-900 to-transparent sm:hidden" />
     </div>
   );
 }
@@ -473,12 +482,51 @@ export default function DashboardPage() {
     removeClass,
     toggleClassItem,
     toggleClassTask,
+    updateItemStatus,
     setGrade,
     removeGrade,
   } = useClasses();
 
   const [showModal, setShowModal] = useState(false);
   const [checkoutBanner, setCheckoutBanner] = useState<"success" | "cancel" | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // ── Toast notifications ──
+  const [toasts, setToasts] = useState<{ id: string; message: string }[]>([]);
+  function showToast(message: string) {
+    const id = crypto.randomUUID();
+    setToasts((prev) => [...prev, { id, message }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3000);
+  }
+
+  // ── Study streak ──
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const lastActive = localStorage.getItem("sai_last_active");
+    const stored = parseInt(localStorage.getItem("sai_streak") ?? "0", 10);
+    if (lastActive === today) {
+      setStreak(stored);
+    } else if (lastActive) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const ystr = yesterday.toISOString().split("T")[0];
+      const next = lastActive === ystr ? stored + 1 : 1;
+      setStreak(next);
+      localStorage.setItem("sai_streak", String(next));
+    } else {
+      setStreak(1);
+      localStorage.setItem("sai_streak", "1");
+    }
+    localStorage.setItem("sai_last_active", today);
+  }, []);
+
+  // ── Onboarding ──
+  useEffect(() => {
+    if (!localStorage.getItem("sai_onboarded")) {
+      setShowOnboarding(true);
+    }
+  }, []);
 
   // Handle Stripe return — runs once on mount, reads URL params client-side
   React.useEffect(() => {
@@ -635,6 +683,7 @@ export default function DashboardPage() {
             rawText: syllabusText,
           });
           setSavedClassId(id);
+          showToast("Course saved to My Courses");
         }
       }
     } catch (err) {
@@ -667,10 +716,23 @@ export default function DashboardPage() {
     };
   }, []);
 
-  function toggleItem(id: string) {
+  function handleItemStatus(id: string, status: SubmissionStatus) {
+    const isNowComplete = status === "submitted" || status === "graded";
+    const wasComplete = items.find((i) => i.id === id)?.completed;
+    if (isNowComplete && !wasComplete) showToast("Deadline marked complete");
     setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, completed: !item.completed } : item))
+      prev.map((i) =>
+        i.id === id ? { ...i, status, completed: isNowComplete } : i
+      )
     );
+  }
+
+  function handleClassItemStatus(classId: string, itemId: string, status: SubmissionStatus) {
+    const cls = classes.find((c) => c.id === classId);
+    const item = cls?.items.find((i) => i.id === itemId);
+    const isNowComplete = status === "submitted" || status === "graded";
+    if (isNowComplete && !item?.completed) showToast("Deadline marked complete");
+    updateItemStatus(classId, itemId, status);
   }
 
   function toggleTask(weekId: string, taskId: string) {
@@ -714,20 +776,20 @@ export default function DashboardPage() {
       grades: localGrades,
     });
     setSavedClassId(id);
-    // Show confirmation banner for 3 seconds
+    showToast("Course saved to My Courses");
     setSaveBannerVisible(true);
     if (saveBannerTimer.current) clearTimeout(saveBannerTimer.current);
     saveBannerTimer.current = setTimeout(() => setSaveBannerVisible(false), 3000);
   }
 
   function handleLocalGrade(entry: GradeEntry) {
+    showToast("Grade saved");
     setLocalGrades((prev) => {
       const existing = prev.find((g) => g.itemId === entry.itemId);
       return existing
         ? prev.map((g) => (g.itemId === entry.itemId ? entry : g))
         : [...prev, entry];
     });
-    // Keep saved class in sync if already saved
     if (savedClassId) setGrade(savedClassId, entry);
   }
 
@@ -793,6 +855,15 @@ export default function DashboardPage() {
     setAssignmentError(null);
   }
 
+  // ── Class item / task toggle wrappers (fire toast on completion) ──
+
+  function handleToggleClassItem(classId: string, itemId: string) {
+    const cls = classes.find((c) => c.id === classId);
+    const item = cls?.items.find((i) => i.id === itemId);
+    if (item && !item.completed) showToast("Deadline marked complete");
+    toggleClassItem(classId, itemId);
+  }
+
   // ── Derived values ──
 
   const grouped = items.reduce<Partial<Record<ItemType, DeadlineItem[]>>>((acc, item) => {
@@ -805,6 +876,22 @@ export default function DashboardPage() {
   const progress = items.length > 0 ? (completedCount / items.length) * 100 : 0;
   const completedTaskCount = studyPlan.flatMap((w) => w.tasks).filter((t) => t.completed).length;
   const totalTaskCount = studyPlan.flatMap((w) => w.tasks).length;
+
+  // Stats bar
+  const now = new Date();
+  const dueThisWeek = classes.reduce((count, cls) =>
+    count + cls.items.filter((item) => {
+      if (item.completed) return false;
+      const due = new Date(item.dueDate);
+      if (isNaN(due.getTime())) return false;
+      const days = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return days >= 0 && days <= 7;
+    }).length, 0);
+  const allGrades = classes.flatMap((cls) => cls.grades);
+  const totalMax = allGrades.reduce((s, g) => s + g.max, 0);
+  const avgGrade = totalMax > 0
+    ? Math.round((allGrades.reduce((s, g) => s + g.earned, 0) / totalMax) * 100)
+    : null;
 
   // ── Render ──
 
@@ -858,8 +945,34 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Stats bar */}
+          {!classesLoading && (streak > 0 || classes.length > 0) && (
+            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+              <div className="rounded-xl border border-orange-200 bg-orange-50 dark:border-slate-700 dark:bg-slate-800 p-4 text-center shadow-sm">
+                <p className="text-2xl font-bold text-orange-500">🔥 {streak}</p>
+                <p className="mt-0.5 text-xs text-orange-600 dark:text-slate-400">Day streak</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-center shadow-sm">
+                <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{classes.length}</p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">Course{classes.length !== 1 ? "s" : ""}</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-center shadow-sm">
+                <p className={`text-2xl font-bold ${dueThisWeek > 0 ? "text-amber-500" : "text-gray-900 dark:text-slate-100"}`}>
+                  {dueThisWeek}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">Due this week</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-center shadow-sm">
+                <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">
+                  {avgGrade !== null ? `${avgGrade}%` : "—"}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">Avg grade</p>
+              </div>
+            </div>
+          )}
+
           {/* Mode toggle */}
-          <div className="mb-8 flex flex-col items-center gap-2 text-center">
+          <div className="mb-8 flex flex-col items-center gap-2">
             <ModeToggle tab={tab} onChange={setTab} />
             <p className="text-xs text-gray-400">
               {tab === "week"
@@ -883,7 +996,7 @@ export default function DashboardPage() {
             ) : (
               <ThisWeekView
                 classes={classes}
-                onToggleItem={toggleClassItem}
+                onToggleItem={handleToggleClassItem}
                 onToggleTask={toggleClassTask}
                 onGoToCourses={() => setTab("courses")}
                 onGoToPractice={() => setTab("practice")}
@@ -899,9 +1012,9 @@ export default function DashboardPage() {
             <CoursesDashboard
               classes={classes}
               isPro={isPro}
-              onToggleItem={toggleClassItem}
+              onStatusChange={handleClassItemStatus}
               onToggleTask={toggleClassTask}
-              onSetGrade={setGrade}
+              onSetGrade={(classId, entry) => { setGrade(classId, entry); showToast("Grade saved"); }}
               onRemoveGrade={removeGrade}
               onDelete={removeClass}
               onUpgradeClick={() => setShowModal(true)}
@@ -1161,7 +1274,7 @@ export default function DashboardPage() {
                               </div>
                               <div className="grid gap-3 sm:grid-cols-2">
                                 {typeItems.map((item) => (
-                                  <DeadlineCard key={item.id} item={item} onToggle={toggleItem} />
+                                  <DeadlineCard key={item.id} item={item} onStatusChange={handleItemStatus} />
                                 ))}
                               </div>
                             </div>
@@ -1330,6 +1443,30 @@ export default function DashboardPage() {
         open={showModal}
         onClose={() => setShowModal(false)}
       />
+
+      <OnboardingModal
+        open={showOnboarding}
+        onDone={() => {
+          localStorage.setItem("sai_onboarded", "true");
+          setShowOnboarding(false);
+          setTab("analyze");
+        }}
+      />
+
+      {/* Toast notifications */}
+      <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className="pointer-events-auto flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800 shadow-lg"
+          >
+            <svg className="h-4 w-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            {toast.message}
+          </div>
+        ))}
+      </div>
     </>
   );
 }

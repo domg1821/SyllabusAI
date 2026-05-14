@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { SavedClass, GradeEntry } from "./types";
+import { SavedClass, GradeEntry, SubmissionStatus } from "./types";
 import {
   rowToSavedClass,
   savedClassToRow,
@@ -273,9 +273,14 @@ export function useClasses() {
       if (!cls) return;
       const snapshot = classesRef.current.slice();
 
-      const newItems = cls.items.map((item) =>
-        item.id === itemId ? { ...item, completed: !item.completed } : item
-      );
+      const newItems = cls.items.map((item) => {
+        if (item.id !== itemId) return item;
+        const nowCompleted = !item.completed;
+        const newStatus: SubmissionStatus = nowCompleted
+          ? "submitted"
+          : "not_started";
+        return { ...item, completed: nowCompleted, status: newStatus };
+      });
 
       setClasses((prev) =>
         prev.map((c) => (c.id === classId ? { ...c, items: newItems } : c))
@@ -290,6 +295,38 @@ export function useClasses() {
             .eq("user_id", userId),
         () => {
           console.error("[useClasses] toggleClassItem rolled back");
+          setClasses(snapshot);
+        }
+      );
+    },
+    [supabase, setClasses, dbSync]
+  );
+
+  const updateItemStatus = useCallback(
+    (classId: string, itemId: string, status: SubmissionStatus) => {
+      const cls = classesRef.current.find((c) => c.id === classId);
+      if (!cls) return;
+      const snapshot = classesRef.current.slice();
+
+      const newItems = cls.items.map((item) => {
+        if (item.id !== itemId) return item;
+        const completed = status === "submitted" || status === "graded";
+        return { ...item, status, completed };
+      });
+
+      setClasses((prev) =>
+        prev.map((c) => (c.id === classId ? { ...c, items: newItems } : c))
+      );
+
+      dbSync(
+        (userId) =>
+          supabase
+            .from("courses")
+            .update({ items: newItems })
+            .eq("id", classId)
+            .eq("user_id", userId),
+        () => {
+          console.error("[useClasses] updateItemStatus rolled back");
           setClasses(snapshot);
         }
       );
@@ -402,6 +439,7 @@ export function useClasses() {
     removeClass,
     toggleClassItem,
     toggleClassTask,
+    updateItemStatus,
     setGrade,
     removeGrade,
   };

@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
-import { SavedClass } from "@/lib/types";
+import { useState } from "react";
+import { SavedClass, SubmissionStatus } from "@/lib/types";
+import { exportToIcs } from "@/lib/icsExport";
 import DeadlineCard from "./DeadlineCard";
 import StudyWeekCard from "./StudyWeekCard";
 import GradeTracker from "./GradeTracker";
+
 interface Props {
   classes: SavedClass[];
   isPro: boolean;
-  onToggleItem: (classId: string, itemId: string) => void;
+  onStatusChange: (classId: string, itemId: string, status: SubmissionStatus) => void;
   onToggleTask: (classId: string, weekId: string, taskId: string) => void;
   onSetGrade: (classId: string, entry: import("@/lib/types").GradeEntry) => void;
   onRemoveGrade: (classId: string, itemId: string) => void;
@@ -19,10 +21,21 @@ interface Props {
 
 type ClassView = "deadlines" | "study" | "grades";
 
+function downloadIcs(cls: SavedClass) {
+  const content = exportToIcs([cls]);
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${cls.code || cls.name}-deadlines.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function CoursesDashboard({
   classes,
   isPro,
-  onToggleItem,
+  onStatusChange,
   onToggleTask,
   onSetGrade,
   onRemoveGrade,
@@ -55,8 +68,6 @@ export default function CoursesDashboard({
       </div>
     );
   }
-
-  const expanded = classes.find((c) => c.id === expandedId) ?? null;
 
   return (
     <div className="space-y-6">
@@ -183,19 +194,34 @@ export default function CoursesDashboard({
               {/* Expanded content */}
               {isExpanded && (
                 <div className="border-t border-gray-100 px-5 py-4">
-                  {/* Sub-nav */}
-                  <div className="mb-4 flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 w-fit">
-                    {(["deadlines", "study", "grades"] as ClassView[]).map((v) => (
+                  {/* Sub-nav + export button */}
+                  <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 w-fit">
+                      {(["deadlines", "study", "grades"] as ClassView[]).map((v) => (
+                        <button
+                          key={v}
+                          onClick={() => setClassView(v)}
+                          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors capitalize ${
+                            classView === v ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
+                          }`}
+                        >
+                          {v === "study" ? "Study Plan" : v === "grades" ? "Grades" : "Deadlines"}
+                        </button>
+                      ))}
+                    </div>
+
+                    {cls.items.length > 0 && (
                       <button
-                        key={v}
-                        onClick={() => setClassView(v)}
-                        className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors capitalize ${
-                          classView === v ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
-                        }`}
+                        onClick={() => downloadIcs(cls)}
+                        title="Export deadlines to calendar"
+                        className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
                       >
-                        {v === "study" ? "Study Plan" : v === "grades" ? "Grades" : "Deadlines"}
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                        </svg>
+                        Export .ics
                       </button>
-                    ))}
+                    )}
                   </div>
 
                   {classView === "deadlines" && (
@@ -207,7 +233,7 @@ export default function CoursesDashboard({
                           <DeadlineCard
                             key={item.id}
                             item={item}
-                            onToggle={(id) => onToggleItem(cls.id, id)}
+                            onStatusChange={(id, status) => onStatusChange(cls.id, id, status)}
                           />
                         ))}
                       </div>
