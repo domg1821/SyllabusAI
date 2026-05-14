@@ -8,3 +8,7 @@ Sentry.init({
 
   debug: false,
 });
+
+// Required by @sentry/nextjs to instrument App Router client-side navigations.
+// Without this export Sentry cannot attach navigation spans to route transitions.
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
