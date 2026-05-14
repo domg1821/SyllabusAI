@@ -511,24 +511,44 @@ export async function POST(req: NextRequest) {
     await markUsed();
     return NextResponse.json({ data, mock: false, truncated: wasTruncated });
   } catch (err) {
-    console.error(
-      "[analyze] Claude API error:",
-      err instanceof Error ? err.message : String(err)
-    );
+    // Log the full error so it's visible in Vercel runtime logs.
+    // Anthropic SDK errors carry .status and .error beyond the base .message.
+    console.error("[analyze] Claude API error (full):", err);
+
+    let clientMessage: string;
+    let httpStatus = 500;
+
+    if (err instanceof Anthropic.APIError) {
+      const status = err.status;
+      const apiMsg = (err.error as { error?: { message?: string } } | undefined)?.error?.message ?? err.message;
+      console.error(`[analyze] Anthropic APIError status=${status} message=${apiMsg}`);
+
+      if (status === 401) {
+        clientMessage = "API key is invalid or missing. Contact support.";
+        httpStatus = 502;
+      } else if (status === 429) {
+        clientMessage = "Our AI provider is rate-limited right now. Please wait a minute and try again.";
+        httpStatus = 429;
+      } else if (status === 529 || (status >= 500 && status < 600)) {
+        clientMessage = "The AI provider is temporarily overloaded. Please try again in a moment.";
+        httpStatus = 503;
+      } else {
+        clientMessage = `Analysis failed (API error ${status}): ${apiMsg}`;
+      }
+    } else {
+      clientMessage =
+        mode === "syllabus"
+          ? "The syllabus text was loaded, but analysis failed. Please try again."
+          : "Failed to analyze. Please try again.";
+    }
+
     Sentry.withScope((scope) => {
       scope.setTag("route", "analyze");
       scope.setTag("analysis.mode", mode);
       scope.setUser({ id: user.id });
       Sentry.captureException(err);
     });
-    return NextResponse.json(
-      {
-        error:
-          mode === "syllabus"
-            ? "The syllabus text was loaded, but analysis failed. Try a shorter section or re-upload."
-            : "Failed to analyze. Please try again.",
-      },
-      { status: 500 }
-    );
+
+    return NextResponse.json({ error: clientMessage }, { status: httpStatus });
   }
 }

@@ -598,8 +598,8 @@ export default function DashboardPage() {
       setSyllabusWasTruncated(truncated ?? false);
       setSyllabusAnalyzed(true);
       recordAnalysis();
-    } catch {
-      setSyllabusError("The syllabus text was loaded, but analysis failed. Try a shorter section or re-upload.");
+    } catch (err) {
+      setSyllabusError(err instanceof Error ? err.message : "Network error. Please check your connection and try again.");
     } finally {
       setSyllabusAnalyzing(false);
     }
