@@ -322,18 +322,21 @@ Question type: ${typeDescription}
 
 Return ONLY a valid JSON object with a "questions" array containing exactly ${questionCount} question${questionCount !== 1 ? "s" : ""}.`;
 
-    const response = await client.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: 4096,
-      system: [
-        {
-          type: "text",
-          text: PRACTICE_TEST_SYSTEM_PROMPT,
-          cache_control: { type: "ephemeral" },
-        },
-      ],
-      messages: [{ role: "user", content: userContent }],
-    });
+    const response = await client.messages.create(
+      {
+        model: "claude-opus-4-6",
+        max_tokens: 4096,
+        system: [
+          {
+            type: "text",
+            text: PRACTICE_TEST_SYSTEM_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
+        messages: [{ role: "user", content: userContent }],
+      },
+      { timeout: 55_000 },
+    );
 
     const rawText =
       response.content[0].type === "text" ? response.content[0].text : "";
@@ -373,15 +376,33 @@ Return ONLY a valid JSON object with a "questions" array containing exactly ${qu
 
     return NextResponse.json({ data: { questions }, mock: false });
   } catch (err) {
-    console.error("[practice-test] Claude API error:", err);
+    console.error("[practice-test] Claude API error (full):", err);
+
+    let clientMessage = "Failed to generate test. Please try again.";
+    let httpStatus = 500;
+
+    if (err instanceof Anthropic.APIConnectionTimeoutError) {
+      console.error("[practice-test] Claude API timed out after 55s");
+      clientMessage = "Test generation timed out. Please try again with a simpler topic.";
+      httpStatus = 504;
+    } else if (err instanceof Anthropic.APIError) {
+      const status = err.status;
+      const apiMsg = (err.error as { error?: { message?: string } } | undefined)?.error?.message ?? err.message;
+      console.error(`[practice-test] Anthropic APIError status=${status} message=${apiMsg}`);
+      if (status === 429) {
+        clientMessage = "Our AI provider is rate-limited right now. Please wait a minute and try again.";
+        httpStatus = 429;
+      } else if (status === 529 || (status >= 500 && status < 600)) {
+        clientMessage = "The AI provider is temporarily overloaded. Please try again in a moment.";
+        httpStatus = 503;
+      }
+    }
+
     Sentry.withScope((scope) => {
       scope.setTag("route", "practice-test");
       scope.setContext("request", { topic, questionCount, questionType, difficulty });
       Sentry.captureException(err);
     });
-    return NextResponse.json(
-      { error: "Failed to generate test. Please try again." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: clientMessage }, { status: httpStatus });
   }
 }

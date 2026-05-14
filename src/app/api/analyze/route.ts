@@ -471,12 +471,15 @@ async function handlePost(req: NextRequest) {
 
     console.log(`[analyze] mode=${mode} inputLength=${preparedText.length} truncated=${wasTruncated} userId=${user.id}`);
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 8192,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userContent }],
-    });
+    const response = await client.messages.create(
+      {
+        model: "claude-sonnet-4-6",
+        max_tokens: 8192,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userContent }],
+      },
+      { timeout: 55_000 },
+    );
 
     const rawText = response.content
       .filter((block) => block.type === "text")
@@ -533,7 +536,14 @@ async function handlePost(req: NextRequest) {
     let clientMessage: string;
     let httpStatus = 500;
 
-    if (err instanceof Anthropic.APIError) {
+    if (err instanceof Anthropic.APIConnectionTimeoutError) {
+      console.error("[analyze] Claude API timed out after 55s");
+      clientMessage =
+        mode === "syllabus"
+          ? "Analysis timed out — your syllabus may be too long. Try pasting just the deadlines and grading sections."
+          : "Analysis timed out. Try a shorter assignment description.";
+      httpStatus = 504;
+    } else if (err instanceof Anthropic.APIError) {
       const status = err.status;
       const apiMsg = (err.error as { error?: { message?: string } } | undefined)?.error?.message ?? err.message;
       console.error(`[analyze] Anthropic APIError status=${status} message=${apiMsg}`);
