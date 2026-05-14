@@ -402,8 +402,8 @@ async function handlePost(req: NextRequest) {
 
     const response = await client.messages.create(
       {
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: mode === "syllabus" ? 2000 : 1500,
+        model: "claude-haiku-4-5",
+        max_tokens: mode === "syllabus" ? 3000 : 2000,
         system: systemPrompt,
         messages: [{ role: "user", content: userContent }],
       },
@@ -415,11 +415,15 @@ async function handlePost(req: NextRequest) {
       .map((block) => block.text)
       .join("\n");
 
-    console.log("[analyze] raw response preview:", rawText.slice(0, 500));
+    console.log("[analyze] raw Claude response:", rawText);
     let parsed: unknown;
 
     try {
-      parsed = parseModelJson(rawText);
+      // Strip any leading preamble text before the JSON object begins.
+      // Haiku sometimes prefixes with "Here is the JSON:" or similar.
+      const jsonStart = rawText.indexOf("{");
+      const stripped = jsonStart > 0 ? rawText.slice(jsonStart) : rawText;
+      parsed = parseModelJson(stripped);
     } catch (parseError) {
       console.error(
         "[analyze] Failed to parse model response:",
