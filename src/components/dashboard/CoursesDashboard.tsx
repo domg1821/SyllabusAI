@@ -6,6 +6,7 @@ import {
   SubmissionStatus,
   DeadlineItem,
   StudyTask,
+  StudyWeek,
   ItemType,
 } from "@/lib/types";
 import { exportToIcs } from "@/lib/icsExport";
@@ -60,6 +61,62 @@ function matchDeadline(groupName: string, items: DeadlineItem[]): DeadlineItem |
   });
 }
 
+// ─── Exam proximity helpers ────────────────────────────────────────────────────
+
+function getWeekDateRange(week: StudyWeek): { start: Date | null; end: Date | null } {
+  const dates = week.tasks
+    .filter((t) => t.date)
+    .map((t) => new Date(t.date!))
+    .filter((d) => !isNaN(d.getTime()));
+  if (dates.length === 0) return { start: null, end: null };
+  const times = dates.map((d) => d.getTime());
+  return { start: new Date(Math.min(...times)), end: new Date(Math.max(...times)) };
+}
+
+interface ExamProximityInfo {
+  examThisWeek?: DeadlineItem;
+  daysUntilNextExam: number | null;
+  examProximity: "normal" | "soon" | "this-week";
+}
+
+function getExamProximityInfo(week: StudyWeek, items: DeadlineItem[]): ExamProximityInfo {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const { start, end } = getWeekDateRange(week);
+
+  const examItems = items
+    .filter((item) => item.type === "exam" || item.type === "quiz")
+    .sort((a, b) => parseDueDate(a.dueDate).getTime() - parseDueDate(b.dueDate).getTime());
+
+  let examThisWeek: DeadlineItem | undefined;
+  if (start && end) {
+    const extEnd = new Date(end.getTime() + 2 * 24 * 60 * 60 * 1000);
+    examThisWeek = examItems.find((item) => {
+      const d = parseDueDate(item.dueDate);
+      return d >= start && d <= extEnd;
+    });
+  }
+
+  const weekStart = start ?? today;
+  const nextExam = examItems.find((item) => parseDueDate(item.dueDate) >= weekStart);
+
+  let daysUntilNextExam: number | null = null;
+  let examProximity: "normal" | "soon" | "this-week" = "normal";
+
+  if (nextExam) {
+    daysUntilNextExam = Math.ceil(
+      (parseDueDate(nextExam.dueDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (examThisWeek) {
+      examProximity = "this-week";
+    } else if (daysUntilNextExam <= 7) {
+      examProximity = "soon";
+    }
+  }
+
+  return { examThisWeek, daysUntilNextExam, examProximity };
+}
+
 function downloadIcs(cls: SavedClass) {
   const content = exportToIcs([cls]);
   const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
@@ -109,6 +166,103 @@ function computeExamGroups(cls: SavedClass): ExamGroup[] {
     });
 }
 
+// ─── ExamTimeline ──────────────────────────────────────────────────────────────
+
+function ExamTimeline({ items }: { items: DeadlineItem[] }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const examItems = items
+    .filter((item) => item.type === "exam" || item.type === "quiz")
+    .sort((a, b) => parseDueDate(a.dueDate).getTime() - parseDueDate(b.dueDate).getTime());
+
+  if (examItems.length === 0) return null;
+
+  return (
+    <div className="mb-4 overflow-hidden rounded-xl border border-indigo-100 bg-indigo-50/30 p-4">
+      <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-indigo-400">
+        📍 Exam Roadmap
+      </p>
+      <div className="overflow-x-auto pb-1">
+        <div className="flex items-start min-w-max">
+          {/* Today marker */}
+          <div className="flex flex-col items-center">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 ring-2 ring-indigo-100">
+              <span className="text-[7px] font-black leading-none text-white">NOW</span>
+            </div>
+            <div className="mt-1.5 text-[9px] font-bold text-indigo-600">Today</div>
+          </div>
+
+          {examItems.map((item, i) => {
+            const dueDate = parseDueDate(item.dueDate);
+            const daysFromToday = Math.ceil(
+              (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+            );
+            const isPast = daysFromToday < 0;
+            const prevDate = i === 0 ? today : parseDueDate(examItems[i - 1].dueDate);
+            const gapDays = Math.ceil(
+              (dueDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            const dotBg = isPast
+              ? "bg-gray-300 ring-gray-100"
+              : daysFromToday <= 7
+                ? "bg-red-500 ring-red-100"
+                : daysFromToday <= 14
+                  ? "bg-amber-400 ring-amber-100"
+                  : item.type === "quiz"
+                    ? "bg-violet-400 ring-violet-100"
+                    : "bg-rose-400 ring-rose-100";
+
+            const lineColor = isPast
+              ? "bg-gray-200"
+              : daysFromToday <= 7
+                ? "bg-red-200"
+                : daysFromToday <= 14
+                  ? "bg-amber-200"
+                  : "bg-gray-200";
+
+            const daysLabel =
+              isPast
+                ? `${Math.abs(daysFromToday)}d ago`
+                : daysFromToday === 0
+                  ? "Today!"
+                  : `${daysFromToday}d`;
+
+            const daysColor =
+              isPast
+                ? "text-gray-400"
+                : daysFromToday <= 7
+                  ? "text-red-500 font-bold"
+                  : "text-gray-500";
+
+            return (
+              <div key={item.id} className="flex items-start">
+                {/* Connector segment */}
+                <div className="flex flex-col items-center" style={{ minWidth: "56px" }}>
+                  <div className={`mt-3 h-px w-full ${lineColor}`} />
+                  <span className="mt-1 text-[8px] text-gray-400">{Math.abs(gapDays)}d</span>
+                </div>
+
+                {/* Exam node */}
+                <div className="flex flex-col items-center" style={{ maxWidth: "80px" }}>
+                  <div className={`flex h-6 w-6 items-center justify-center rounded-full ring-2 text-[8px] font-bold text-white ${dotBg}`}>
+                    {isPast ? "✓" : item.type === "quiz" ? "Q" : "E"}
+                  </div>
+                  <p className="mt-1.5 max-w-[76px] px-1 text-center text-[9px] font-medium leading-tight text-gray-600 line-clamp-2">
+                    {item.title}
+                  </p>
+                  <span className={`mt-0.5 text-[8px] ${daysColor}`}>{daysLabel}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ExamGroupCard ─────────────────────────────────────────────────────────────
 
 function ExamGroupCard({
@@ -124,15 +278,62 @@ function ExamGroupCard({
     group.tasks.length > 0 ? (group.completedCount / group.tasks.length) * 100 : 0;
   const isAllDone = group.completedCount === group.tasks.length && group.tasks.length > 0;
 
+  // Compute days until exam for urgency coloring
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let days: number | null = null;
+  if (group.deadline?.dueDate && group.deadline.dueDate.toUpperCase() !== "TBD") {
+    const d = parseDueDate(group.deadline.dueDate);
+    if (!isNaN(d.getTime())) {
+      days = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    }
+  }
+  const isOverdue = days !== null && days < 0;
+  const isUrgent = days !== null && !isOverdue && days <= 7;
+  const isSoon = days !== null && !isOverdue && days <= 14;
+
+  const cardBorder = isAllDone
+    ? "border-emerald-200 bg-emerald-50/30"
+    : isUrgent
+      ? "border-red-200 bg-red-50/20"
+      : isSoon
+        ? "border-amber-200 bg-amber-50/20"
+        : "border-gray-200 bg-white";
+
+  const daysLabel =
+    days === null
+      ? null
+      : isOverdue
+        ? `${Math.abs(days)}d ago`
+        : days === 0
+          ? "Today!"
+          : `${days}d away`;
+
+  const daysColor = isUrgent
+    ? "text-red-500 font-bold"
+    : isSoon
+      ? "text-amber-500 font-semibold"
+      : isOverdue
+        ? "text-gray-400"
+        : "text-gray-400";
+
   return (
-    <div
-      className={`rounded-xl border p-4 transition-all ${
-        isAllDone ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 bg-white"
-      }`}
-    >
+    <div className={`rounded-xl border p-4 transition-all ${cardBorder}`}>
+      {/* Urgency alert strip */}
+      {isUrgent && !isAllDone && (
+        <div className="mb-3 flex items-center gap-2 rounded-lg bg-red-100 px-3 py-1.5">
+          <span className="text-sm">🚨</span>
+          <span className="text-xs font-semibold text-red-700">
+            {days === 0
+              ? "Exam is today!"
+              : `${days} day${days !== 1 ? "s" : ""} until this exam`}
+          </span>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5 mb-1">
+          <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
             {group.deadline && (
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
@@ -142,23 +343,25 @@ function ExamGroupCard({
                 {group.deadline.type}
               </span>
             )}
-            {group.deadline && (
-              <span className="text-[10px] text-gray-400">
-                Due{" "}
+            {group.deadline && days !== null && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
                 {parseDueDate(group.deadline.dueDate).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                 })}
               </span>
             )}
+            {daysLabel && (
+              <span className={`text-[10px] ${daysColor}`}>{daysLabel}</span>
+            )}
             {isAllDone && (
               <span className="text-[10px] font-semibold text-emerald-600">✓ Done</span>
             )}
           </div>
-          <p className="text-sm font-semibold text-gray-900 leading-snug">{group.name}</p>
+          <p className="text-base font-bold text-gray-900 leading-snug">{group.name}</p>
           <p className="mt-0.5 text-xs text-gray-500">
             {group.tasks.length} task{group.tasks.length !== 1 ? "s" : ""}
-            {group.totalMins > 0 ? ` · ~${formatMins(group.totalMins)} total` : ""}
+            {group.totalMins > 0 ? ` · ~${formatMins(group.totalMins)}` : ""}
           </p>
         </div>
         <div className="flex shrink-0 flex-col gap-1.5">
@@ -189,9 +392,7 @@ function ExamGroupCard({
         <div className="h-1.5 w-full rounded-full bg-gray-100">
           <div
             className={`h-1.5 rounded-full transition-all duration-500 ${
-              isAllDone
-                ? "bg-emerald-500"
-                : "bg-gradient-to-r from-indigo-500 to-violet-500"
+              isAllDone ? "bg-emerald-500" : "bg-gradient-to-r from-indigo-500 to-violet-500"
             }`}
             style={{ width: `${progressPct}%` }}
           />
@@ -643,11 +844,13 @@ export default function CoursesDashboard({
                           {/* By Week view */}
                           {studyMode === "week" && focusedGroup === null && (
                             <div className="space-y-3">
+                              <ExamTimeline items={cls.items} />
                               {cls.studyPlan.map((week) => {
                                 const wn = week.weekLabel.match(/Week\s+(\d+)/i)?.[1];
                                 const wt = wn
                                   ? cls.weeklyTopics?.find((t) => t.week === parseInt(wn))
                                   : undefined;
+                                const proximityInfo = getExamProximityInfo(week, cls.items);
                                 return (
                                   <StudyWeekCard
                                     key={week.id}
@@ -657,6 +860,9 @@ export default function CoursesDashboard({
                                     }
                                     weekTopic={wt?.topic}
                                     weekChapters={wt?.chapters}
+                                    examThisWeek={proximityInfo.examThisWeek}
+                                    daysUntilNextExam={proximityInfo.daysUntilNextExam}
+                                    examProximity={proximityInfo.examProximity}
                                   />
                                 );
                               })}
