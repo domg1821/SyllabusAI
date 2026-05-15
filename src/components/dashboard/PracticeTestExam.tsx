@@ -13,10 +13,12 @@ interface Props {
 }
 
 const DIFFICULTY_BADGE: Record<Difficulty, { label: string; className: string }> = {
-  easy: { label: "Easy", className: "bg-emerald-100 text-emerald-700" },
-  medium: { label: "Medium", className: "bg-amber-100 text-amber-700" },
-  hard: { label: "Hard", className: "bg-red-100 text-red-700" },
+  easy:   { label: "Easy",   className: "bg-emerald-100 text-emerald-700" },
+  medium: { label: "Medium", className: "bg-amber-100 text-amber-700"    },
+  hard:   { label: "Hard",   className: "bg-red-100 text-red-700"        },
 };
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function PracticeTestExam({
   topic,
@@ -26,11 +28,25 @@ export default function PracticeTestExam({
   onAnswerChange,
   onSubmit,
 }: Props) {
+  // Set of question IDs whose answers are locked in (MC only)
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
   const [submitWarning, setSubmitWarning] = useState(false);
 
-  const answeredCount = questions.filter((q) => userAnswers[q.id]?.trim()).length;
-  const unansweredCount = questions.length - answeredCount;
+  const saQuestions = questions.filter((q) => q.type === "short_answer");
+
+  // "answered" = MC locked or SA has non-empty text
+  const mcAnswered = revealedIds.size;
+  const saAnswered = saQuestions.filter((q) => userAnswers[q.id]?.trim()).length;
+  const answeredTotal = mcAnswered + saAnswered;
+  const unansweredCount = questions.length - answeredTotal;
   const badge = DIFFICULTY_BADGE[difficulty];
+  const progress = questions.length > 0 ? (answeredTotal / questions.length) * 100 : 0;
+
+  function handleMCAnswer(questionId: string, letter: string) {
+    if (revealedIds.has(questionId)) return;
+    onAnswerChange(questionId, letter);
+    setRevealedIds((prev) => new Set([...prev, questionId]));
+  }
 
   function handleSubmitClick() {
     if (unansweredCount > 0) {
@@ -40,43 +56,46 @@ export default function PracticeTestExam({
     onSubmit();
   }
 
-  function handleConfirmSubmit() {
-    setSubmitWarning(false);
-    onSubmit();
-  }
-
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      {/* Exam header */}
+      {/* Progress header */}
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 leading-snug">{topic}</h1>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.className}`}
-              >
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-gray-900 leading-snug">{topic}</h1>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.className}`}>
                 {badge.label}
               </span>
-              <span className="text-xs text-gray-400">{questions.length} questions</span>
-              <span className="text-xs text-gray-300">·</span>
-              <span className="text-xs text-gray-400">
-                {answeredCount}/{questions.length} answered
-              </span>
+              <span className="text-xs text-gray-400">{questions.length} question{questions.length !== 1 ? "s" : ""}</span>
             </div>
           </div>
-          {/* Progress bar */}
-          <div className="w-full mt-3">
-            <div className="h-1.5 w-full rounded-full bg-gray-100">
-              <div
-                className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-300"
-                style={{
-                  width: `${questions.length > 0 ? (answeredCount / questions.length) * 100 : 0}%`,
-                }}
-              />
+          <div className="shrink-0 text-right">
+            <div className="flex items-baseline gap-0.5 justify-end">
+              <span className={`text-3xl font-extrabold tabular-nums ${answeredTotal === questions.length ? "text-emerald-600" : "text-gray-900"}`}>
+                {answeredTotal}
+              </span>
+              <span className="text-lg font-normal text-gray-400">/{questions.length}</span>
             </div>
+            <p className="text-xs text-gray-400">answered</p>
           </div>
         </div>
+        {/* Progress bar */}
+        <div className="h-2 w-full rounded-full bg-gray-100">
+          <div
+            className={`h-2 rounded-full transition-all duration-500 ${
+              answeredTotal === questions.length
+                ? "bg-gradient-to-r from-emerald-400 to-emerald-500"
+                : "bg-gradient-to-r from-indigo-500 to-violet-500"
+            }`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        {answeredTotal === questions.length && (
+          <p className="mt-2 text-center text-xs font-medium text-emerald-600">
+            All answered — ready to submit!
+          </p>
+        )}
       </div>
 
       {/* Questions */}
@@ -87,7 +106,9 @@ export default function PracticeTestExam({
             question={question}
             index={index}
             answer={userAnswers[question.id] ?? ""}
-            onAnswerChange={(ans) => onAnswerChange(question.id, ans)}
+            isRevealed={revealedIds.has(question.id)}
+            onMCAnswer={(letter) => handleMCAnswer(question.id, letter)}
+            onSAChange={(v) => onAnswerChange(question.id, v)}
           />
         ))}
       </div>
@@ -96,14 +117,14 @@ export default function PracticeTestExam({
       {submitWarning && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-sm font-semibold text-amber-800">
-            You have {unansweredCount} unanswered question{unansweredCount !== 1 ? "s" : ""}.
+            {unansweredCount} question{unansweredCount !== 1 ? "s" : ""} still unanswered.
           </p>
           <p className="mt-1 text-xs text-amber-700">
-            Unanswered questions will be marked incorrect. Are you sure you want to submit?
+            Unanswered MC questions count as incorrect. Submit anyway?
           </p>
           <div className="mt-3 flex gap-2">
             <button
-              onClick={handleConfirmSubmit}
+              onClick={() => { setSubmitWarning(false); onSubmit(); }}
               className="rounded-lg bg-amber-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-amber-500 transition-colors"
             >
               Submit anyway
@@ -112,13 +133,13 @@ export default function PracticeTestExam({
               onClick={() => setSubmitWarning(false)}
               className="rounded-lg border border-amber-200 px-4 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors"
             >
-              Go back
+              Keep answering
             </button>
           </div>
         </div>
       )}
 
-      {/* Submit button */}
+      {/* Submit */}
       <div className="pb-8">
         <button
           onClick={handleSubmitClick}
@@ -127,7 +148,9 @@ export default function PracticeTestExam({
           Submit Test
         </button>
         <p className="mt-2 text-center text-xs text-gray-400">
-          Your answers will be saved and reviewed after submission.
+          {unansweredCount > 0
+            ? `${unansweredCount} question${unansweredCount !== 1 ? "s" : ""} remaining`
+            : "All questions answered — tap to see your results."}
         </p>
       </div>
     </div>
@@ -140,108 +163,177 @@ function QuestionCard({
   question,
   index,
   answer,
-  onAnswerChange,
+  isRevealed,
+  onMCAnswer,
+  onSAChange,
 }: {
   question: TestQuestion;
   index: number;
   answer: string;
-  onAnswerChange: (answer: string) => void;
+  isRevealed: boolean;
+  onMCAnswer: (letter: string) => void;
+  onSAChange: (v: string) => void;
 }) {
-  const isAnswered = answer.trim().length > 0;
+  const isMC = question.type === "multiple_choice";
+  const mc = question as MCQuestion;
+  const isCorrect = isMC && answer === mc.correctAnswer;
+
+  let border = "border-gray-200";
+  if (isRevealed) border = isCorrect ? "border-emerald-300" : "border-red-300";
+  else if (answer) border = "border-indigo-200";
+
+  let bg = "bg-white";
+  if (isRevealed) bg = isCorrect ? "bg-emerald-50/40" : "bg-red-50/30";
 
   return (
-    <div
-      className={`rounded-2xl border bg-white p-5 shadow-sm transition-all ${
-        isAnswered ? "border-indigo-200" : "border-gray-200"
-      }`}
-    >
-      {/* Question header */}
+    <div className={`rounded-2xl border p-5 shadow-sm transition-all ${border} ${bg}`}>
+      {/* Header */}
       <div className="mb-4 flex items-start gap-3">
-        <div
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-            isAnswered
-              ? "bg-indigo-600 text-white"
-              : "bg-gray-100 text-gray-500"
-          }`}
-        >
+        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors ${
+          isRevealed
+            ? isCorrect ? "bg-emerald-500 text-white" : "bg-red-500 text-white"
+            : answer ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-500"
+        }`}>
           {index + 1}
         </div>
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span
-              className={`text-[10px] font-semibold uppercase tracking-wider ${
-                question.type === "multiple_choice"
-                  ? "text-indigo-500"
-                  : "text-violet-500"
-              }`}
-            >
-              {question.type === "multiple_choice" ? "Multiple Choice" : "Short Answer"}
+          <div className="mb-1.5 flex flex-wrap items-center gap-2">
+            <span className={`text-[10px] font-semibold uppercase tracking-wider ${
+              isMC ? "text-indigo-500" : "text-violet-500"
+            }`}>
+              {isMC ? "Multiple Choice" : "Short Answer"}
             </span>
+            {isRevealed && (
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                isCorrect ? "text-emerald-600" : "text-red-500"
+              }`}>
+                · {isCorrect ? "✓ Correct" : "✗ Incorrect"}
+              </span>
+            )}
           </div>
-          <p className="text-sm font-medium leading-relaxed text-gray-900">
-            {question.question}
-          </p>
+          <p className="text-sm font-medium leading-relaxed text-gray-900">{question.question}</p>
         </div>
       </div>
 
-      {/* Answer area */}
-      {question.type === "multiple_choice" ? (
+      {isMC ? (
         <MCAnswerInput
-          question={question as MCQuestion}
+          question={mc}
           selected={answer}
-          onChange={onAnswerChange}
+          isRevealed={isRevealed}
+          isCorrect={isCorrect}
+          onAnswer={onMCAnswer}
         />
       ) : (
-        <SAAnswerInput value={answer} onChange={onAnswerChange} />
+        <SAAnswerInput value={answer} onChange={onSAChange} />
       )}
     </div>
   );
 }
 
-// ─── Multiple Choice Input ────────────────────────────────────────────────────
+// ─── Multiple Choice Input ─────────────────────────────────────────────────────
 
 function MCAnswerInput({
   question,
   selected,
-  onChange,
+  isRevealed,
+  isCorrect,
+  onAnswer,
 }: {
   question: MCQuestion;
   selected: string;
-  onChange: (letter: string) => void;
+  isRevealed: boolean;
+  isCorrect: boolean;
+  onAnswer: (letter: string) => void;
 }) {
   return (
-    <div className="ml-10 space-y-2">
+    <div className="ml-11 space-y-2.5">
       {question.options.map((option) => {
-        const letter = option[0]; // "A", "B", "C", "D"
+        const letter = option[0];
         const isSelected = selected === letter;
+        const isCorrectAnswer = question.correctAnswer === letter;
+
+        let cls =
+          "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all ";
+
+        if (isRevealed) {
+          if (isCorrectAnswer) {
+            cls += "border-emerald-400 bg-emerald-50 cursor-default";
+          } else if (isSelected && !isCorrect) {
+            cls += "border-red-400 bg-red-50 cursor-default";
+          } else {
+            cls += "border-gray-100 bg-gray-50 opacity-50 cursor-default";
+          }
+        } else {
+          cls += isSelected
+            ? "border-indigo-400 bg-indigo-50 ring-1 ring-indigo-200 cursor-pointer"
+            : "border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/40 cursor-pointer";
+        }
+
+        const dotCls = isRevealed
+          ? isCorrectAnswer
+            ? "bg-emerald-600 text-white"
+            : isSelected && !isCorrect
+              ? "bg-red-500 text-white"
+              : "bg-gray-200 text-gray-400"
+          : isSelected
+            ? "bg-indigo-600 text-white"
+            : "border border-gray-300 text-gray-400";
+
         return (
           <button
             key={letter}
-            onClick={() => onChange(letter)}
-            className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left text-sm transition-all ${
-              isSelected
-                ? "border-indigo-400 bg-indigo-50 text-indigo-900 ring-1 ring-indigo-300"
-                : "border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300 hover:bg-white"
-            }`}
+            onClick={() => !isRevealed && onAnswer(letter)}
+            disabled={isRevealed}
+            className={cls}
           >
-            <div
-              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                isSelected
-                  ? "bg-indigo-600 text-white"
-                  : "border border-gray-300 text-gray-400"
-              }`}
-            >
-              {letter}
+            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${dotCls}`}>
+              {isRevealed && isCorrectAnswer
+                ? "✓"
+                : isRevealed && isSelected && !isCorrect
+                  ? "✗"
+                  : letter}
             </div>
-            <span className="leading-snug">{option.slice(3)}</span>
+            <span className={`text-sm leading-snug ${
+              isRevealed
+                ? isCorrectAnswer
+                  ? "font-semibold text-emerald-900"
+                  : isSelected && !isCorrect
+                    ? "font-semibold text-red-900"
+                    : "text-gray-400"
+                : isSelected
+                  ? "font-medium text-indigo-900"
+                  : "text-gray-700"
+            }`}>
+              {option.slice(3)}
+            </span>
           </button>
         );
       })}
+
+      {/* Inline explanation revealed after answer */}
+      {isRevealed && (
+        <div className={`mt-1 rounded-xl border px-4 py-3 ${
+          isCorrect
+            ? "border-emerald-200 bg-emerald-50"
+            : "border-amber-200 bg-amber-50"
+        }`}>
+          <p className={`mb-1 text-[10px] font-semibold uppercase tracking-wide ${
+            isCorrect ? "text-emerald-600" : "text-amber-600"
+          }`}>
+            {isCorrect ? "Why that's correct" : "Explanation"}
+          </p>
+          <p className="text-sm leading-relaxed text-gray-700">
+            {isCorrect
+              ? question.explanation
+              : (question.wrongExplanation || question.explanation)}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Short Answer Input ───────────────────────────────────────────────────────
+// ─── Short Answer Input ────────────────────────────────────────────────────────
 
 function SAAnswerInput({
   value,
@@ -251,7 +343,7 @@ function SAAnswerInput({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="ml-10">
+    <div className="ml-11">
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}

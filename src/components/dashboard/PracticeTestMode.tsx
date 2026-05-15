@@ -44,6 +44,7 @@ export default function PracticeTestMode({ isPro, onUpgradeClick, classes }: Pro
   const [currentQuestionType, setCurrentQuestionType] = useState<QuestionType>("multiple_choice");
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [isMock, setIsMock] = useState(false);
+  const [examStartTime, setExamStartTime] = useState<number | null>(null);
 
   // Current results
   const [currentAttempt, setCurrentAttempt] = useState<TestAttempt | null>(null);
@@ -88,6 +89,7 @@ export default function PracticeTestMode({ isPro, onUpgradeClick, classes }: Pro
       setCurrentQuestionType(opts.questionType);
       setUserAnswers({});
       setIsMock(json.mock ?? false);
+      setExamStartTime(Date.now());
       setView("exam");
     } catch (err) {
       setGenerateError(err instanceof Error ? err.message : "Network error. Please check your connection and try again.");
@@ -122,6 +124,7 @@ export default function PracticeTestMode({ isPro, onUpgradeClick, classes }: Pro
       mcCount,
       questions: currentQuestions,
       userAnswers,
+      duration: examStartTime != null ? Date.now() - examStartTime : undefined,
     };
 
     saveAttempt(attempt);

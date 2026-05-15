@@ -105,6 +105,7 @@ export interface TestAttempt {
   mcCount: number;         // total MC questions in the test
   questions: TestQuestion[];
   userAnswers: Record<string, string>;
+  duration?: number;       // milliseconds
 }
 
 export type DashboardTab = "week" | "courses" | "analyze" | "practice" | "calendar";
