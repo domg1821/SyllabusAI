@@ -23,6 +23,8 @@ interface Props {
   onDelete: (classId: string) => void;
   onUpgradeClick: () => void;
   onAddNew: () => void;
+  onGenerateFlashcards?: (groupName: string, cls: SavedClass) => void;
+  onStartCram?: (item: DeadlineItem, cls: SavedClass) => void;
 }
 
 type ClassView = "deadlines" | "study" | "grades";
@@ -112,9 +114,11 @@ function computeExamGroups(cls: SavedClass): ExamGroup[] {
 function ExamGroupCard({
   group,
   onFocus,
+  onFlashcards,
 }: {
   group: ExamGroup;
   onFocus: () => void;
+  onFlashcards?: () => void;
 }) {
   const progressPct =
     group.tasks.length > 0 ? (group.completedCount / group.tasks.length) * 100 : 0;
@@ -157,12 +161,22 @@ function ExamGroupCard({
             {group.totalMins > 0 ? ` · ~${formatMins(group.totalMins)} total` : ""}
           </p>
         </div>
-        <button
-          onClick={onFocus}
-          className="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 active:scale-95 transition-all"
-        >
-          Start Studying
-        </button>
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <button
+            onClick={onFocus}
+            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 active:scale-95 transition-all"
+          >
+            Start Studying
+          </button>
+          {onFlashcards && (
+            <button
+              onClick={onFlashcards}
+              className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-100 active:scale-95 transition-all"
+            >
+              Flashcards
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-1">
@@ -329,6 +343,8 @@ export default function CoursesDashboard({
   onDelete,
   onUpgradeClick,
   onAddNew,
+  onGenerateFlashcards,
+  onStartCram,
 }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [classView, setClassView] = useState<ClassView>("deadlines");
@@ -592,6 +608,7 @@ export default function CoursesDashboard({
                             key={item.id}
                             item={item}
                             onStatusChange={(id, status) => onStatusChange(cls.id, id, status)}
+                            onCram={onStartCram ? () => onStartCram(item, cls) : undefined}
                           />
                         ))}
                       </div>
@@ -670,6 +687,11 @@ export default function CoursesDashboard({
                                     key={group.name}
                                     group={group}
                                     onFocus={() => setFocusedGroup(group.name)}
+                                    onFlashcards={
+                                      onGenerateFlashcards
+                                        ? () => onGenerateFlashcards(group.name, cls)
+                                        : undefined
+                                    }
                                   />
                                 ))}
                               </div>

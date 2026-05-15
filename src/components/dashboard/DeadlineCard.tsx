@@ -47,9 +47,10 @@ function dueDateStyle(days: number | null): string {
 interface Props {
   item: DeadlineItem;
   onStatusChange: (id: string, status: SubmissionStatus) => void;
+  onCram?: () => void;
 }
 
-export default function DeadlineCard({ item, onStatusChange }: Props) {
+export default function DeadlineCard({ item, onStatusChange, onCram }: Props) {
   const config = typeConfig[item.type];
   const currentStatus: SubmissionStatus = item.status ?? "not_started";
   const statusCfg = STATUS_CONFIG[currentStatus];
@@ -104,6 +105,17 @@ export default function DeadlineCard({ item, onStatusChange }: Props) {
           </span>
         </div>
       </div>
+
+      {/* Cram button — exam type only */}
+      {onCram && item.type === "exam" && !isCompleted && (
+        <button
+          onClick={onCram}
+          title="Start Exam Cram session"
+          className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 active:scale-95 transition-all"
+        >
+          Cram
+        </button>
+      )}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   DashboardTab,
   GradeEntry,
   ItemType,
+  SavedClass,
   StudyWeek,
   SubmissionStatus,
   WeeklyTopic,
@@ -28,6 +29,9 @@ import OnboardingModal from "@/components/dashboard/OnboardingModal";
 import ThisWeekView from "@/components/dashboard/ThisWeekView";
 import GradeTracker from "@/components/dashboard/GradeTracker";
 import CalendarView from "@/components/dashboard/CalendarView";
+import FlashcardMode from "@/components/dashboard/FlashcardMode";
+import CramMode from "@/components/dashboard/CramMode";
+import { getWeeklyStudyMinutes } from "@/lib/useStudySessions";
 
 // ─── Sample content ────────────────────────────────────────────────────────────
 
@@ -491,6 +495,17 @@ export default function DashboardPage() {
   const [checkoutBanner, setCheckoutBanner] = useState<"success" | "cancel" | null>(null);
   const [streak, setStreak] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [weeklyStudyMinutes, setWeeklyStudyMinutes] = useState(0);
+
+  // Flashcard / cram overlays
+  const [flashcardSession, setFlashcardSession] = useState<{
+    groupName: string;
+    cls: SavedClass;
+  } | null>(null);
+  const [cramSession, setCramSession] = useState<{
+    item: DeadlineItem;
+    cls: SavedClass;
+  } | null>(null);
 
   // ── Toast notifications ──
   const [toasts, setToasts] = useState<{ id: string; message: string }[]>([]);
@@ -520,6 +535,11 @@ export default function DashboardPage() {
     }
     localStorage.setItem("sai_last_active", today);
   }, []);
+
+  // ── Weekly study minutes ──
+  useEffect(() => {
+    setWeeklyStudyMinutes(getWeeklyStudyMinutes());
+  }, [flashcardSession, cramSession]);
 
   // ── Onboarding ──
   useEffect(() => {
@@ -951,6 +971,14 @@ export default function DashboardPage() {
               <div className="rounded-xl border border-orange-200 bg-orange-50 dark:border-slate-700 dark:bg-slate-800 p-4 text-center shadow-sm">
                 <p className="text-2xl font-bold text-orange-500">🔥 {streak}</p>
                 <p className="mt-0.5 text-xs text-orange-600 dark:text-slate-400">Day streak</p>
+                {weeklyStudyMinutes >= 1 && (
+                  <p className="mt-1 text-[10px] font-medium text-orange-400">
+                    {weeklyStudyMinutes < 60
+                      ? `${Math.round(weeklyStudyMinutes)}m studied`
+                      : `${(weeklyStudyMinutes / 60).toFixed(1)}h studied`}{" "}
+                    this week
+                  </p>
+                )}
               </div>
               <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-center shadow-sm">
                 <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{classes.length}</p>
@@ -1019,6 +1047,8 @@ export default function DashboardPage() {
               onDelete={removeClass}
               onUpgradeClick={() => setShowModal(true)}
               onAddNew={() => { setTab("analyze"); setAnalyzeMode("syllabus"); }}
+              onGenerateFlashcards={(groupName, cls) => setFlashcardSession({ groupName, cls })}
+              onStartCram={(item, cls) => setCramSession({ item, cls })}
             />
             )
           )}
@@ -1452,6 +1482,32 @@ export default function DashboardPage() {
           setTab("analyze");
         }}
       />
+
+      {/* Flashcard overlay */}
+      {flashcardSession && (
+        <FlashcardMode
+          chapterName={flashcardSession.groupName}
+          courseName={flashcardSession.cls.name}
+          courseContext={flashcardSession.cls.rawText?.slice(0, 1500)}
+          onClose={() => {
+            setFlashcardSession(null);
+            setWeeklyStudyMinutes(getWeeklyStudyMinutes());
+          }}
+        />
+      )}
+
+      {/* Cram overlay */}
+      {cramSession && (
+        <CramMode
+          exam={cramSession.item}
+          courseName={cramSession.cls.name}
+          courseContext={cramSession.cls.rawText?.slice(0, 1500)}
+          onClose={() => {
+            setCramSession(null);
+            setWeeklyStudyMinutes(getWeeklyStudyMinutes());
+          }}
+        />
+      )}
 
       {/* Toast notifications */}
       <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">

@@ -9,6 +9,8 @@ import { createClient } from "@/lib/supabase/client";
 import { usePro } from "@/lib/usePro";
 import { ProBadge } from "@/components/dashboard/UpgradeModal";
 import DashboardNav from "@/components/dashboard/DashboardNav";
+import { getStudySessions } from "@/lib/useStudySessions";
+import { StudySession } from "@/lib/types";
 
 // ─── Confirmation modal ────────────────────────────────────────────────────────
 
@@ -74,6 +76,7 @@ export default function AccountPage() {
 
   const [email, setEmail] = useState<string | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [sessions, setSessions] = useState<StudySession[]>([]);
 
   // Password change
   const [newPassword, setNewPassword] = useState("");
@@ -96,6 +99,7 @@ export default function AccountPage() {
       setLoadingUser(false);
     }
     load();
+    setSessions(getStudySessions().slice(0, 10));
   }, []);
 
   async function handlePasswordChange(e: React.FormEvent) {
@@ -281,6 +285,41 @@ export default function AccountPage() {
               </button>
             </form>
           </div>
+
+          {/* ── Study Sessions ── */}
+          {sessions.length > 0 && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-5 border-b border-gray-100 pb-4 text-base font-bold text-gray-900">
+                Recent Study Sessions
+              </h2>
+              <div className="space-y-2">
+                {sessions.map((s) => {
+                  const mins = Math.round(s.duration / 60_000);
+                  const durStr = mins < 1 ? "<1m" : mins < 60 ? `${mins}m` : `${(mins / 60).toFixed(1)}h`;
+                  const dateStr = new Date(s.date).toLocaleDateString("en-US", {
+                    month: "short", day: "numeric",
+                  });
+                  return (
+                    <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-gray-800">{s.chapter}</p>
+                        <p className="text-xs text-gray-400">{s.courseName}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-xs font-semibold text-indigo-600">{durStr}</p>
+                        <p className="text-xs text-gray-400">{dateStr}</p>
+                        {s.score !== undefined && (
+                          <p className={`text-xs font-semibold ${s.score >= 60 ? "text-emerald-600" : "text-amber-600"}`}>
+                            {s.score}%
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ── Danger zone ── */}
           <div className="rounded-2xl border border-red-100 bg-white p-6 shadow-sm">

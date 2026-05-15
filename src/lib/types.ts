@@ -110,6 +110,25 @@ export interface TestAttempt {
 
 export type DashboardTab = "week" | "courses" | "analyze" | "practice" | "calendar";
 
+// ─── Flashcard types ───────────────────────────────────────────────────────────
+
+export interface Flashcard {
+  front: string;
+  back: string;
+  difficulty: "easy" | "medium" | "hard";
+}
+
+// ─── Study session types ───────────────────────────────────────────────────────
+
+export interface StudySession {
+  id: string;
+  date: string;       // ISO date string
+  chapter: string;    // name of the chapter/exam group studied
+  courseName: string;
+  duration: number;   // milliseconds
+  score?: number;     // 0-100 if a quiz was taken
+}
+
 // ─── Multi-class types ─────────────────────────────────────────────────────────
 
 export interface GradeEntry {
