@@ -1,6 +1,7 @@
 import React from "react";
+import Link from "next/link";
 
-type FeatureColor = "indigo" | "violet" | "emerald" | "amber" | "red" | "sky";
+type FeatureColor = "indigo" | "violet" | "emerald" | "amber" | "red" | "sky" | "orange" | "purple";
 
 const features: {
   id: string;
@@ -92,6 +93,57 @@ const features: {
   },
 ];
 
+const studySmarter = [
+  {
+    emoji: "🧑‍🏫",
+    label: "Teach It Back",
+    title: "The Feynman Technique, built in",
+    description: "Explain a topic in your own words and get instant AI feedback — score, strengths, gaps, and a model answer. If you can teach it, you know it.",
+    color: "orange" as FeatureColor,
+  },
+  {
+    emoji: "🗺️",
+    label: "Memory Map",
+    title: "See how ideas connect",
+    description: "Auto-generates a concept map for any chapter — core ideas, supporting concepts, and details — so you understand structure, not just facts. Mark what you know.",
+    color: "purple" as FeatureColor,
+  },
+  {
+    emoji: "📋",
+    label: "Exam Style",
+    title: "Practice like it's the real thing",
+    description: "Generate exam-level short answer and essay questions based on your actual syllabus. Submit and get per-question feedback, a grade, and model answers.",
+    color: "emerald" as FeatureColor,
+  },
+];
+
+const personas = [
+  {
+    emoji: "😅",
+    type: "The Procrastinator",
+    quote: "\"I have a midterm in 3 days and haven't started.\"",
+    how: "SyllabusAI tells you exactly what to cram, generates a 90-minute study plan, and quizzes you on the most likely exam topics.",
+    accent: "border-red-200 bg-red-50",
+    labelColor: "text-red-600",
+  },
+  {
+    emoji: "📅",
+    type: "The Planner",
+    quote: "\"I want to stay ahead all semester, not panic at finals.\"",
+    how: "Upload all your syllabi and get a semester-long study calendar with weekly tasks, deadlines, and review reminders baked in.",
+    accent: "border-indigo-200 bg-indigo-50",
+    labelColor: "text-indigo-600",
+  },
+  {
+    emoji: "🎯",
+    type: "The Test-Taker",
+    quote: "\"I study but always blank on the actual exam.\"",
+    how: "Teach It Back and Exam Style train your recall under pressure. Practice tests show exactly which topics you're still shaky on.",
+    accent: "border-emerald-200 bg-emerald-50",
+    labelColor: "text-emerald-600",
+  },
+];
+
 const colorMap = {
   indigo: { bg: "bg-indigo-50", icon: "text-indigo-600", badge: "bg-indigo-100 text-indigo-700" },
   violet: { bg: "bg-violet-50", icon: "text-violet-600", badge: "bg-violet-100 text-violet-700" },
@@ -99,53 +151,125 @@ const colorMap = {
   amber: { bg: "bg-amber-50", icon: "text-amber-600", badge: "bg-amber-100 text-amber-700" },
   red: { bg: "bg-red-50", icon: "text-red-600", badge: "bg-red-100 text-red-700" },
   sky: { bg: "bg-sky-50", icon: "text-sky-600", badge: "bg-sky-100 text-sky-700" },
+  orange: { bg: "bg-orange-50", icon: "text-orange-600", badge: "bg-orange-100 text-orange-700" },
+  purple: { bg: "bg-purple-50", icon: "text-purple-600", badge: "bg-purple-100 text-purple-700" },
 } as const;
 
 export default function Features() {
   return (
-    <section id="features" className="bg-gray-50 py-24">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="mb-16 text-center">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-indigo-600">
-            Features
-          </p>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-            Everything a student needs
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-gray-500">
-            One tool that turns a wall of text into a working study plan,
-            grade tracker, and personalized exam — in seconds.
-          </p>
-        </div>
+    <>
+      {/* Core features */}
+      <section id="features" className="bg-gray-50 py-24">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-16 text-center">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-indigo-600">
+              Features
+            </p>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Everything a student needs
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-lg text-gray-500">
+              One tool that turns a wall of text into a working study plan,
+              grade tracker, and personalized exam — in seconds.
+            </p>
+          </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((f) => {
-            const c = colorMap[f.color];
-            return (
-              <div
-                key={f.id}
-                className="group rounded-2xl border border-gray-100 bg-white p-7 shadow-sm transition-shadow hover:shadow-md"
-              >
-                <div className="mb-4 flex items-start justify-between">
-                  <div className={`inline-flex rounded-xl p-3 ${c.bg} ${c.icon}`}>
-                    {f.icon}
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((f) => {
+              const c = colorMap[f.color];
+              return (
+                <div
+                  key={f.id}
+                  className="group rounded-2xl border border-gray-100 bg-white p-7 shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <div className="mb-4 flex items-start justify-between">
+                    <div className={`inline-flex rounded-xl p-3 ${c.bg} ${c.icon}`}>
+                      {f.icon}
+                    </div>
+                    {f.pro && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+                        Pro
+                      </span>
+                    )}
                   </div>
-                  {f.pro && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
-                      Pro
-                    </span>
-                  )}
+                  <span className={`mb-3 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${c.badge}`}>
+                    {f.label}
+                  </span>
+                  <h3 className="mb-2 text-base font-semibold text-gray-900">{f.title}</h3>
+                  <p className="text-sm leading-relaxed text-gray-500">{f.description}</p>
                 </div>
-                <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${c.badge} mb-3`}>
-                  {f.label}
-                </span>
-                <h3 className="mb-2 text-base font-semibold text-gray-900">{f.title}</h3>
-                <p className="text-sm leading-relaxed text-gray-500">{f.description}</p>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* Study Smarter — Pro */}
+      <section className="bg-white py-24">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-12 text-center">
+            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+              ✦ Pro
+            </span>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Study smarter, not just longer
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-lg text-gray-500">
+              Pro unlocks AI study modes proven to build deeper understanding — not just rote memorisation.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-3">
+            {studySmarter.map((f) => {
+              const c = colorMap[f.color];
+              return (
+                <div key={f.label} className={`rounded-2xl border p-7 ${c.bg} border-opacity-60`}>
+                  <div className="mb-4 text-3xl">{f.emoji}</div>
+                  <span className={`mb-3 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${c.badge}`}>
+                    {f.label}
+                  </span>
+                  <h3 className="mb-2 text-base font-semibold text-gray-900">{f.title}</h3>
+                  <p className="text-sm leading-relaxed text-gray-600">{f.description}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-10 text-center">
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors"
+            >
+              See Pro features →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Student persona cards */}
+      <section className="bg-gray-50 py-24">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Which student are you?
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-lg text-gray-500">
+              SyllabusAI adapts to how you actually study — wherever you are in the semester.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-3">
+            {personas.map((p) => (
+              <div key={p.type} className={`rounded-2xl border p-7 ${p.accent}`}>
+                <div className="mb-3 text-4xl">{p.emoji}</div>
+                <p className={`mb-1 text-xs font-bold uppercase tracking-wider ${p.labelColor}`}>{p.type}</p>
+                <p className="mb-4 text-base font-semibold italic text-gray-800">{p.quote}</p>
+                <p className="text-sm leading-relaxed text-gray-600">{p.how}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import LandingNav from "@/components/landing/LandingNav";
+import UrgencyBanner from "@/components/landing/UrgencyBanner";
 import Hero from "@/components/landing/Hero";
 import Features from "@/components/landing/Features";
 import Demo from "@/components/landing/Demo";
@@ -20,6 +21,7 @@ export default async function Home() {
 
   return (
     <>
+      <UrgencyBanner />
       <LandingNav />
       <main className="flex-1">
         <Hero />

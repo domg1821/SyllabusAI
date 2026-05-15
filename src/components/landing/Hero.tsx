@@ -25,18 +25,17 @@ export default function Hero() {
 
         {/* Headline */}
         <h1 className="text-5xl font-extrabold leading-[1.1] tracking-tight text-gray-900 sm:text-6xl lg:text-7xl">
-          Stop guessing what to study.
+          The AI study partner that
           <br />
           <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-            Start knowing.
+            actually knows your syllabus.
           </span>
         </h1>
 
         {/* Subtext */}
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-500 sm:text-xl">
-          Paste any syllabus and SyllabusAI extracts every deadline, builds a
-          personalized weekly study plan, tracks your grades, and generates
-          practice tests — so you always know exactly what to do next.
+          Upload your syllabus and SyllabusAI builds a personalized study plan, tracks every deadline,
+          generates practice tests, and coaches you with AI — all tailored to exactly what you need to know.
         </p>
 
         {/* CTAs */}
@@ -61,6 +60,20 @@ export default function Hero() {
         <p className="mt-6 text-sm text-gray-400">
           Free to start &middot; No card required &middot; Works with any syllabus or course format
         </p>
+
+        {/* Social proof stats */}
+        <div className="mt-12 flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-12">
+          {[
+            { stat: "10,000+", label: "deadlines tracked" },
+            { stat: "50,000+", label: "flashcards generated" },
+            { stat: "1 grade higher", label: "students report on average" },
+          ].map(({ stat, label }) => (
+            <div key={label} className="text-center">
+              <p className="text-2xl font-extrabold text-gray-900">{stat}</p>
+              <p className="mt-0.5 text-sm text-gray-500">{label}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* App preview mockup */}
@@ -80,9 +93,9 @@ export default function Hero() {
           </div>
 
           {/* Two-panel preview */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+          <div className="grid grid-cols-1 divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 divide-gray-100">
             {/* Left: deadline list */}
-            <div className="p-5 space-y-2">
+            <div className="space-y-2 p-5">
               <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">Upcoming deadlines</p>
               {[
                 { label: "Quiz 1 — Intro to Programming", type: "quiz", date: "Sep 26", done: true },
@@ -90,7 +103,7 @@ export default function Hero() {
                 { label: "Homework 3", type: "assignment", date: "Nov 7", done: false },
                 { label: "Final Project", type: "project", date: "Dec 5", done: false },
               ].map((item) => (
-                <div key={item.label} className="flex items-center gap-2.5 rounded-lg px-3 py-2 bg-gray-50">
+                <div key={item.label} className="flex items-center gap-2.5 rounded-lg bg-gray-50 px-3 py-2">
                   <div
                     className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 ${
                       item.done ? "border-indigo-500 bg-indigo-500" : "border-gray-300"
@@ -125,27 +138,29 @@ export default function Hero() {
               ))}
             </div>
 
-            {/* Right: grade tracker */}
+            {/* Right: study hub preview */}
             <div className="p-5">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">Grade tracker</p>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">Study Hub</p>
               <div className="space-y-2">
                 {[
-                  { label: "CS 101", grade: "A−", pct: 91, color: "bg-emerald-500" },
-                  { label: "MATH 201", grade: "B+", pct: 88, color: "bg-indigo-500" },
-                  { label: "HIST 110", grade: "B−", pct: 80, color: "bg-amber-500" },
-                ].map((c) => (
-                  <div key={c.label} className="flex items-center gap-3">
-                    <p className="w-20 text-xs font-semibold text-gray-600 truncate">{c.label}</p>
-                    <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
-                      <div className={`h-full rounded-full ${c.color}`} style={{ width: `${c.pct}%` }} />
+                  { topic: "Week 3 — Recursion & Sorting", tools: ["📝 Practice", "🃏 Flashcards", "🧑‍🏫 Teach It"] },
+                  { topic: "Week 5 — Data Structures", tools: ["🗺️ Memory Map", "📋 Exam Style"] },
+                ].map((item) => (
+                  <div key={item.topic} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                    <p className="mb-2 text-xs font-semibold text-gray-700">{item.topic}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.tools.map((t) => (
+                        <span key={t} className="rounded-md bg-white border border-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+                          {t}
+                        </span>
+                      ))}
                     </div>
-                    <span className="w-8 text-right text-xs font-bold text-gray-700">{c.grade}</span>
                   </div>
                 ))}
-              </div>
-              <div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2">
-                <p className="text-xs font-semibold text-indigo-700">Need 78 pts on HIST 110 final to keep B−</p>
-                <p className="text-[10px] text-indigo-500 mt-0.5">Calculated automatically from your grades</p>
+                <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2">
+                  <p className="text-xs font-semibold text-indigo-700">🎯 Study Midterm Exam — 3 days away</p>
+                  <p className="mt-0.5 text-[10px] text-indigo-500">Suggested: 90 min of exam-style questions</p>
+                </div>
               </div>
             </div>
           </div>
