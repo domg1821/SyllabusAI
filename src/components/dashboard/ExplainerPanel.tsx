@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ExplanationResult {
   simpleExplanation: string;
@@ -12,11 +12,16 @@ interface ExplanationResult {
 interface Props {
   courseName: string;
   courseContext?: string;
+  initialConcept?: string;
   onClose: () => void;
 }
 
-export default function ExplainerPanel({ courseName, courseContext, onClose }: Props) {
-  const [concept, setConcept] = useState("");
+export default function ExplainerPanel({ courseName, courseContext, initialConcept, onClose }: Props) {
+  const [concept, setConcept] = useState(initialConcept ?? "");
+
+  useEffect(() => {
+    if (initialConcept) setConcept(initialConcept);
+  }, [initialConcept]);
   const [result, setResult] = useState<ExplanationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -6,15 +6,15 @@ import { createClient } from "@/lib/supabase/client";
 import { ProBadge } from "./UpgradeModal";
 import { useTheme } from "@/components/ThemeProvider";
 import { SavedClass } from "@/lib/types";
-import { exportToIcs } from "@/lib/icsExport";
 
 interface Props {
   isPro: boolean;
   onUpgradeClick: () => void;
   classes?: SavedClass[];
+  onOpenCalendar?: () => void;
 }
 
-export default function DashboardNav({ isPro, onUpgradeClick, classes = [] }: Props) {
+export default function DashboardNav({ isPro, onUpgradeClick, classes = [], onOpenCalendar }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const isSettings = pathname === "/settings";
@@ -25,17 +25,6 @@ export default function DashboardNav({ isPro, onUpgradeClick, classes = [] }: Pr
     await supabase.auth.signOut();
     router.push("/");
     router.refresh();
-  }
-
-  function handleCalendarExport() {
-    const ics = exportToIcs(classes);
-    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "syllabusai-deadlines.ics";
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   return (
@@ -81,11 +70,11 @@ export default function DashboardNav({ isPro, onUpgradeClick, classes = [] }: Pr
             </>
           )}
 
-          {/* Calendar export */}
-          {classes.length > 0 && (
+          {/* Calendar view */}
+          {classes.length > 0 && onOpenCalendar && (
             <button
-              onClick={handleCalendarExport}
-              title="Export all deadlines to .ics (Google Calendar / Apple Calendar)"
+              onClick={onOpenCalendar}
+              title="View deadline calendar"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-600 dark:hover:text-slate-200 transition-colors"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

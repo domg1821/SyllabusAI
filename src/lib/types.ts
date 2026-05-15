@@ -108,7 +108,7 @@ export interface TestAttempt {
   duration?: number;       // milliseconds
 }
 
-export type DashboardTab = "week" | "courses" | "analyze" | "practice" | "calendar";
+export type DashboardTab = "week" | "courses" | "analyze" | "practice" | "study";
 
 // ─── Flashcard types ───────────────────────────────────────────────────────────
 

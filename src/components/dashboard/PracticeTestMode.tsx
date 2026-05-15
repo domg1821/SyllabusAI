@@ -21,9 +21,10 @@ interface Props {
   isPro: boolean;
   onUpgradeClick: () => void;
   classes?: SavedClass[];
+  initialTopic?: string;
 }
 
-export default function PracticeTestMode({ isPro, onUpgradeClick, classes }: Props) {
+export default function PracticeTestMode({ isPro, onUpgradeClick, classes, initialTopic }: Props) {
   const {
     visibleHistory,
     canTakeTest,
@@ -164,6 +165,7 @@ export default function PracticeTestMode({ isPro, onUpgradeClick, classes }: Pro
           onUpgradeClick={onUpgradeClick}
           classes={classes}
           weakTopics={weakTopics}
+          initialTopic={initialTopic}
         />
       )}
 

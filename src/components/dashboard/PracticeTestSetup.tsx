@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Difficulty, QuestionType, SavedClass } from "@/lib/types";
 import {
   FREE_WEEKLY_LIMIT,
@@ -25,6 +25,7 @@ interface Props {
   onUpgradeClick: () => void;
   classes?: SavedClass[];
   weakTopics?: string[];
+  initialTopic?: string;
 }
 
 const QUESTION_TYPES: { value: QuestionType; label: string; desc: string }[] = [
@@ -68,8 +69,13 @@ export default function PracticeTestSetup({
   onUpgradeClick,
   classes,
   weakTopics,
+  initialTopic,
 }: Props) {
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState(initialTopic ?? "");
+
+  useEffect(() => {
+    if (initialTopic) setTopic(initialTopic);
+  }, [initialTopic]);
   const maxQ = isPro ? PRO_MAX_QUESTIONS : FREE_MAX_QUESTIONS;
   const [questionCount, setQuestionCount] = useState(Math.min(5, maxQ));
   const [questionType, setQuestionType] = useState<QuestionType>("multiple_choice");

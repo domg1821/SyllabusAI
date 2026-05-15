@@ -31,6 +31,8 @@ import GradeTracker from "@/components/dashboard/GradeTracker";
 import CalendarView from "@/components/dashboard/CalendarView";
 import FlashcardMode from "@/components/dashboard/FlashcardMode";
 import CramMode from "@/components/dashboard/CramMode";
+import ExplainerPanel from "@/components/dashboard/ExplainerPanel";
+import StudyHub from "@/components/dashboard/StudyHub";
 import { getWeeklyStudyMinutes } from "@/lib/useStudySessions";
 
 // ─── Sample content ────────────────────────────────────────────────────────────
@@ -165,11 +167,11 @@ const TAB_CONFIG: {
     ),
   },
   {
-    value: "calendar",
-    label: "Calendar",
+    value: "study",
+    label: "Study",
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.627 48.627 0 0 1 12 20.904a48.627 48.627 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 3.741-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
       </svg>
     ),
   },
@@ -517,7 +519,7 @@ export default function DashboardPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [weeklyStudyMinutes, setWeeklyStudyMinutes] = useState(0);
 
-  // Flashcard / cram overlays
+  // Flashcard / cram / explainer overlays
   const [flashcardSession, setFlashcardSession] = useState<{
     groupName: string;
     cls: SavedClass;
@@ -526,6 +528,16 @@ export default function DashboardPage() {
     item: DeadlineItem;
     cls: SavedClass;
   } | null>(null);
+  const [explainerSession, setExplainerSession] = useState<{
+    concept: string;
+    cls: SavedClass;
+  } | null>(null);
+
+  // Calendar overlay
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  // Practice test pre-fill from Study Hub
+  const [practiceInitialTopic, setPracticeInitialTopic] = useState<string | undefined>(undefined);
 
   // ── Toast notifications ──
   const [toasts, setToasts] = useState<{ id: string; message: string }[]>([]);
@@ -944,6 +956,7 @@ export default function DashboardPage() {
           isPro={isPro}
           onUpgradeClick={() => setShowModal(true)}
           classes={classes}
+          onOpenCalendar={classes.length > 0 ? () => setCalendarOpen(true) : undefined}
         />
 
         <main className="flex-1 mx-auto w-full max-w-5xl px-6 py-12">
@@ -1035,7 +1048,7 @@ export default function DashboardPage() {
                       : "Decode a single assignment prompt or rubric into a clear action plan"
                     : tab === "practice"
                       ? "Generate a custom practice exam and test your knowledge"
-                      : "See all your deadlines mapped across the month"}
+                      : "Flashcards, practice tests, and exam cram — all in one place"}
             </p>
           </div>
 
@@ -1503,17 +1516,25 @@ export default function DashboardPage() {
               isPro={isPro}
               onUpgradeClick={() => setShowModal(true)}
               classes={classes}
+              initialTopic={practiceInitialTopic}
             />
           )}
 
-          {/* ── Calendar ── */}
-          {tab === "calendar" && (
+          {/* ── Study Hub ── */}
+          {tab === "study" && (
             classesLoading ? (
               <CoursesLoadingSkeleton />
             ) : (
-              <CalendarView
+              <StudyHub
                 classes={classes}
-                onGoToAnalyze={() => setTab("analyze")}
+                onOpenPracticeTest={(topic) => {
+                  setPracticeInitialTopic(topic);
+                  setTab("practice");
+                }}
+                onOpenFlashcards={(groupName, cls) => setFlashcardSession({ groupName, cls })}
+                onOpenExplainer={(concept, cls) => setExplainerSession({ concept, cls })}
+                onOpenCram={(item, cls) => setCramSession({ item, cls })}
+                onAddNew={() => { setTab("analyze"); setAnalyzeMode("syllabus"); }}
               />
             )
           )}
@@ -1559,6 +1580,41 @@ export default function DashboardPage() {
             setWeeklyStudyMinutes(getWeeklyStudyMinutes());
           }}
         />
+      )}
+
+      {/* Explainer overlay */}
+      {explainerSession && (
+        <ExplainerPanel
+          courseName={explainerSession.cls.name}
+          courseContext={explainerSession.cls.rawText?.slice(0, 1500)}
+          initialConcept={explainerSession.concept}
+          onClose={() => setExplainerSession(null)}
+        />
+      )}
+
+      {/* Calendar overlay */}
+      {calendarOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm p-4 pt-16 overflow-y-auto">
+          <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl ring-1 ring-black/10 dark:ring-white/10">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700">
+              <h2 className="text-base font-bold text-gray-900 dark:text-slate-100">Deadline Calendar</h2>
+              <button
+                onClick={() => setCalendarOpen(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4">
+              <CalendarView
+                classes={classes}
+                onGoToAnalyze={() => { setCalendarOpen(false); setTab("analyze"); }}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Toast notifications */}
