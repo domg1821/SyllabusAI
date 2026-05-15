@@ -45,6 +45,10 @@ export default function FlashcardMode({
   const [startTime] = useState(Date.now());
   const [completedAt, setCompletedAt] = useState<number | null>(null);
   const [showExplainer, setShowExplainer] = useState(false);
+  const [showHint, setShowHint] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("sai_flashcard_hint_shown");
+  });
 
   useEffect(() => {
     async function fetchCards() {
@@ -226,12 +230,12 @@ export default function FlashcardMode({
             <>
               {/* Progress bar */}
               <div className="mb-4">
-                <div className="mb-1.5 flex justify-between text-xs text-gray-500">
+                <div className="mb-1.5 flex justify-between text-xs text-gray-500 dark:text-gray-400">
                   <span>
-                    <span className="font-semibold text-gray-900">{masteredCount}</span> of{" "}
+                    <span className="font-semibold text-gray-900 dark:text-slate-100">{masteredCount}</span> of{" "}
                     {totalCards} mastered
                   </span>
-                  <span className="text-gray-400">{queue.length} remaining</span>
+                  <span>{queue.length} remaining</span>
                 </div>
                 <div className="h-1.5 w-full rounded-full bg-gray-100">
                   <div
@@ -244,7 +248,13 @@ export default function FlashcardMode({
               {/* Flip card */}
               <div
                 style={{ perspective: "1000px" }}
-                onClick={!isFlipped ? () => setIsFlipped(true) : undefined}
+                onClick={!isFlipped ? () => {
+                  if (showHint) {
+                    setShowHint(false);
+                    localStorage.setItem("sai_flashcard_hint_shown", "1");
+                  }
+                  setIsFlipped(true);
+                } : undefined}
                 className={!isFlipped ? "cursor-pointer" : ""}
               >
                 <div
@@ -271,7 +281,16 @@ export default function FlashcardMode({
                     <p className="text-base font-semibold leading-relaxed text-gray-900">
                       {currentCard.front}
                     </p>
-                    <p className="mt-4 text-xs text-gray-400">Tap to reveal</p>
+                    {showHint ? (
+                      <div className="mt-4 flex items-center gap-1.5 text-xs text-indigo-400">
+                        <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                        Click to reveal answer
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-xs text-gray-400">Tap to reveal</p>
+                    )}
                   </div>
                   {/* Back */}
                   <div
@@ -333,7 +352,13 @@ export default function FlashcardMode({
                   </div>
                 ) : (
                   <button
-                    onClick={() => setIsFlipped(true)}
+                    onClick={() => {
+                      if (showHint) {
+                        setShowHint(false);
+                        localStorage.setItem("sai_flashcard_hint_shown", "1");
+                      }
+                      setIsFlipped(true);
+                    }}
                     className="w-full rounded-xl border border-indigo-200 bg-indigo-50 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 active:scale-[0.99] transition-all"
                   >
                     Reveal answer

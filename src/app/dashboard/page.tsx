@@ -101,6 +101,26 @@ function CoursesLoadingSkeleton() {
   );
 }
 
+function EmptyCoursesCard({ onAnalyze }: { onAnalyze: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 py-16 px-6 text-center">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950 text-3xl">
+        📚
+      </div>
+      <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">No courses yet</h2>
+      <p className="mt-2 max-w-xs text-sm text-gray-500 dark:text-slate-400">
+        Analyze your first syllabus to extract every deadline and build a personalized study plan.
+      </p>
+      <button
+        onClick={onAnalyze}
+        className="mt-6 flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 active:scale-[0.99] transition-all"
+      >
+        Analyze My First Syllabus →
+      </button>
+    </div>
+  );
+}
+
 // ─── Mode Toggle ───────────────────────────────────────────────────────────────
 
 const TAB_CONFIG: {
@@ -178,13 +198,13 @@ function ModeToggle({
               }`}
             >
               {icon}
-              {label}
+              <span className="hidden md:inline">{label}</span>
             </button>
           ))}
         </div>
       </div>
-      {/* Fade hint indicating more tabs to the right on small screens */}
-      <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-gray-50 dark:from-slate-900 to-transparent sm:hidden" />
+      {/* Fade hint for overflow on small screens */}
+      <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-gray-50 dark:from-slate-900 to-transparent" />
     </div>
   );
 }
@@ -603,6 +623,7 @@ export default function DashboardPage() {
   const [syllabusWasTruncated, setSyllabusWasTruncated] = useState(false);
   const [syllabusError, setSyllabusError] = useState<string | null>(null);
   const [savedClassId, setSavedClassId] = useState<string | null>(null);
+  const [savedBannerName, setSavedBannerName] = useState<string | null>(null);
   const [saveBannerVisible, setSaveBannerVisible] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -703,7 +724,7 @@ export default function DashboardPage() {
             rawText: syllabusText,
           });
           setSavedClassId(id);
-          showToast("Course saved to My Courses");
+          setSavedBannerName(data.course.name);
         }
       }
     } catch (err) {
@@ -724,6 +745,7 @@ export default function DashboardPage() {
     setSyllabusWasTruncated(false);
     setSyllabusError(null);
     setSavedClassId(null);
+    setSavedBannerName(null);
     setSaveBannerVisible(false);
     setSaveError(null);
     setLocalGrades([]);
@@ -1021,6 +1043,8 @@ export default function DashboardPage() {
           {tab === "week" && (
             classesLoading ? (
               <CoursesLoadingSkeleton />
+            ) : classes.length === 0 ? (
+              <EmptyCoursesCard onAnalyze={() => { setTab("analyze"); setAnalyzeMode("syllabus"); }} />
             ) : (
               <ThisWeekView
                 classes={classes}
@@ -1036,6 +1060,8 @@ export default function DashboardPage() {
           {tab === "courses" && (
             classesLoading ? (
               <CoursesLoadingSkeleton />
+            ) : classes.length === 0 ? (
+              <EmptyCoursesCard onAnalyze={() => { setTab("analyze"); setAnalyzeMode("syllabus"); }} />
             ) : (
             <CoursesDashboard
               classes={classes}
@@ -1160,6 +1186,32 @@ export default function DashboardPage() {
                       <p className="text-sm text-amber-800">
                         <span className="font-semibold">Syllabus was trimmed —</span> your syllabus exceeded our limit, so the end was cut off before analysis. All deadlines found above are accurate, but content from later pages may be missing. If anything looks incomplete, paste just the relevant sections and re-analyze.
                       </p>
+                    </div>
+                  )}
+
+                  {/* Auto-save confirmation banner */}
+                  {savedBannerName && !syllabusIsMock && (
+                    <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+                      <svg className="h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                      </svg>
+                      <p className="flex-1 text-sm font-semibold text-emerald-800">
+                        ✓ {savedBannerName} saved to My Courses
+                      </p>
+                      <button
+                        onClick={() => setTab("courses")}
+                        className="shrink-0 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+                      >
+                        View Course →
+                      </button>
+                      <button
+                        onClick={() => setSavedBannerName(null)}
+                        className="ml-1 shrink-0 text-emerald-500 hover:text-emerald-700 transition-colors"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
                   )}
 

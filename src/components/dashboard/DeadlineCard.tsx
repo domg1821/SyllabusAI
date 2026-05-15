@@ -39,7 +39,7 @@ function getDaysUntilDue(dueDate: string): number | null {
 }
 
 function dueDateStyle(days: number | null): string {
-  if (days === null || days > 7) return "text-gray-400";
+  if (days === null || days > 7) return "text-gray-500 dark:text-gray-400";
   if (days <= 2) return "text-red-500 font-semibold";
   return "text-orange-500 font-medium";
 }
@@ -97,7 +97,7 @@ export default function DeadlineCard({ item, onStatusChange, onCram }: Props) {
           </span>
           <span className={`text-xs ${dateClass}`}>Due {item.dueDate}</span>
           {item.points !== undefined && (
-            <span className="text-xs text-gray-400">{item.points} pts</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{item.points} pts</span>
           )}
           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${statusCfg.ring}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />

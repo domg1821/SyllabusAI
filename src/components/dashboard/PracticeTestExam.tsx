@@ -28,19 +28,21 @@ export default function PracticeTestExam({
   onAnswerChange,
   onSubmit,
 }: Props) {
-  // Set of question IDs whose answers are locked in (MC only)
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
-  const [submitWarning, setSubmitWarning] = useState(false);
 
-  const saQuestions = questions.filter((q) => q.type === "short_answer");
+  if (!questions.length) return null;
 
-  // "answered" = MC locked or SA has non-empty text
-  const mcAnswered = revealedIds.size;
-  const saAnswered = saQuestions.filter((q) => userAnswers[q.id]?.trim()).length;
-  const answeredTotal = mcAnswered + saAnswered;
-  const unansweredCount = questions.length - answeredTotal;
+  const question = questions[currentIndex];
+  const isLast = currentIndex === questions.length - 1;
+  const isMC = question.type === "multiple_choice";
+  const isRevealed = revealedIds.has(question.id);
+  const answer = userAnswers[question.id] ?? "";
   const badge = DIFFICULTY_BADGE[difficulty];
-  const progress = questions.length > 0 ? (answeredTotal / questions.length) * 100 : 0;
+
+  // For MC: Next only after explanation is shown. For SA: always available.
+  const canAdvance = isMC ? isRevealed : true;
+  const progressPct = ((currentIndex + (canAdvance ? 1 : 0)) / questions.length) * 100;
 
   function handleMCAnswer(questionId: string, letter: string) {
     if (revealedIds.has(questionId)) return;
@@ -48,12 +50,12 @@ export default function PracticeTestExam({
     setRevealedIds((prev) => new Set([...prev, questionId]));
   }
 
-  function handleSubmitClick() {
-    if (unansweredCount > 0) {
-      setSubmitWarning(true);
-      return;
+  function handleNext() {
+    if (isLast) {
+      onSubmit();
+    } else {
+      setCurrentIndex((prev) => prev + 1);
     }
-    onSubmit();
   }
 
   return (
@@ -67,92 +69,60 @@ export default function PracticeTestExam({
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.className}`}>
                 {badge.label}
               </span>
-              <span className="text-xs text-gray-400">{questions.length} question{questions.length !== 1 ? "s" : ""}</span>
+              <span className="text-xs text-gray-500">
+                {questions.length} question{questions.length !== 1 ? "s" : ""}
+              </span>
             </div>
           </div>
           <div className="shrink-0 text-right">
             <div className="flex items-baseline gap-0.5 justify-end">
-              <span className={`text-3xl font-extrabold tabular-nums ${answeredTotal === questions.length ? "text-emerald-600" : "text-gray-900"}`}>
-                {answeredTotal}
+              <span className="text-3xl font-extrabold tabular-nums text-gray-900">
+                {currentIndex + 1}
               </span>
               <span className="text-lg font-normal text-gray-400">/{questions.length}</span>
             </div>
-            <p className="text-xs text-gray-400">answered</p>
+            <p className="text-xs text-gray-500">question</p>
           </div>
         </div>
         {/* Progress bar */}
         <div className="h-2 w-full rounded-full bg-gray-100">
           <div
             className={`h-2 rounded-full transition-all duration-500 ${
-              answeredTotal === questions.length
+              isLast && canAdvance
                 ? "bg-gradient-to-r from-emerald-400 to-emerald-500"
                 : "bg-gradient-to-r from-indigo-500 to-violet-500"
             }`}
-            style={{ width: `${progress}%` }}
+            style={{ width: `${progressPct}%` }}
           />
         </div>
-        {answeredTotal === questions.length && (
+        {isLast && canAdvance && (
           <p className="mt-2 text-center text-xs font-medium text-emerald-600">
-            All answered — ready to submit!
+            Last question — ready to submit!
           </p>
         )}
       </div>
 
-      {/* Questions */}
-      <div className="space-y-5">
-        {questions.map((question, index) => (
-          <QuestionCard
-            key={question.id}
-            question={question}
-            index={index}
-            answer={userAnswers[question.id] ?? ""}
-            isRevealed={revealedIds.has(question.id)}
-            onMCAnswer={(letter) => handleMCAnswer(question.id, letter)}
-            onSAChange={(v) => onAnswerChange(question.id, v)}
-          />
-        ))}
-      </div>
+      {/* Single question */}
+      <QuestionCard
+        question={question}
+        index={currentIndex}
+        answer={answer}
+        isRevealed={isRevealed}
+        onMCAnswer={(letter) => handleMCAnswer(question.id, letter)}
+        onSAChange={(v) => onAnswerChange(question.id, v)}
+      />
 
-      {/* Unanswered warning */}
-      {submitWarning && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-semibold text-amber-800">
-            {unansweredCount} question{unansweredCount !== 1 ? "s" : ""} still unanswered.
-          </p>
-          <p className="mt-1 text-xs text-amber-700">
-            Unanswered MC questions count as incorrect. Submit anyway?
-          </p>
-          <div className="mt-3 flex gap-2">
-            <button
-              onClick={() => { setSubmitWarning(false); onSubmit(); }}
-              className="rounded-lg bg-amber-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-amber-500 transition-colors"
-            >
-              Submit anyway
-            </button>
-            <button
-              onClick={() => setSubmitWarning(false)}
-              className="rounded-lg border border-amber-200 px-4 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors"
-            >
-              Keep answering
-            </button>
-          </div>
+      {/* Next / Submit — gated for MC until explanation appears */}
+      {canAdvance && (
+        <div className="pb-8">
+          <button
+            onClick={handleNext}
+            className="w-full rounded-xl bg-indigo-600 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-500 active:scale-[0.99] transition-all"
+          >
+            {isLast ? "Submit Test" : "Next Question →"}
+          </button>
         </div>
       )}
-
-      {/* Submit */}
-      <div className="pb-8">
-        <button
-          onClick={handleSubmitClick}
-          className="w-full rounded-xl bg-indigo-600 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-500 active:scale-[0.99] transition-all"
-        >
-          Submit Test
-        </button>
-        <p className="mt-2 text-center text-xs text-gray-400">
-          {unansweredCount > 0
-            ? `${unansweredCount} question${unansweredCount !== 1 ? "s" : ""} remaining`
-            : "All questions answered — tap to see your results."}
-        </p>
-      </div>
     </div>
   );
 }
@@ -310,7 +280,7 @@ function MCAnswerInput({
         );
       })}
 
-      {/* Inline explanation revealed after answer */}
+      {/* Inline explanation — unlocks the Next button */}
       {isRevealed && (
         <div className={`mt-1 rounded-xl border px-4 py-3 ${
           isCorrect
@@ -351,7 +321,7 @@ function SAAnswerInput({
         rows={4}
         className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm leading-relaxed text-gray-700 placeholder-gray-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
       />
-      <p className="mt-1 text-right text-xs text-gray-400">{value.length} chars</p>
+      <p className="mt-1 text-right text-xs text-gray-500">{value.length} chars</p>
     </div>
   );
 }
