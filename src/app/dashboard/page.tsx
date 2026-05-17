@@ -570,8 +570,11 @@ export default function DashboardPage() {
 
   // ── Weekly study minutes ──
   useEffect(() => {
-    setWeeklyStudyMinutes(getWeeklyStudyMinutes());
-  }, [flashcardSession, cramSession]);
+    function refresh() { setWeeklyStudyMinutes(getWeeklyStudyMinutes()); }
+    refresh();
+    window.addEventListener("sai_session_saved", refresh);
+    return () => window.removeEventListener("sai_session_saved", refresh);
+  }, []);
 
   // ── Onboarding ──
   useEffect(() => {
@@ -941,7 +944,7 @@ export default function DashboardPage() {
       const days = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       return days >= 0 && days <= 7;
     }).length, 0);
-  const allGrades = classes.flatMap((cls) => cls.grades);
+  const allGrades = classes.flatMap((cls) => cls.grades ?? []);
   const totalMax = allGrades.reduce((s, g) => s + g.max, 0);
   const avgGrade = totalMax > 0
     ? Math.round((allGrades.reduce((s, g) => s + g.earned, 0) / totalMax) * 100)
@@ -1003,8 +1006,10 @@ export default function DashboardPage() {
           {/* Stats bar */}
           {!classesLoading && (streak > 0 || classes.length > 0) && (
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-              <div className="rounded-xl border border-orange-200 bg-orange-50 dark:border-slate-700 dark:bg-slate-800 p-4 text-center shadow-sm">
-                <p className="text-2xl font-bold text-orange-500">🔥 {streak}</p>
+              <div className="rounded-xl border border-orange-200 bg-orange-50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-indigo-500/10 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
+                <p className="text-2xl font-bold text-orange-500">
+                  {streak > 0 ? <span className="animate-flame">🔥</span> : "🔥"}{" "}{streak}
+                </p>
                 <p className="mt-0.5 text-xs text-orange-600 dark:text-slate-400">Day streak</p>
                 {weeklyStudyMinutes >= 1 && (
                   <p className="mt-1 text-[10px] font-medium text-orange-400">
@@ -1015,17 +1020,17 @@ export default function DashboardPage() {
                   </p>
                 )}
               </div>
-              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-center shadow-sm">
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:shadow-indigo-500/10 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
                 <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{classes.length}</p>
                 <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">Course{classes.length !== 1 ? "s" : ""}</p>
               </div>
-              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-center shadow-sm">
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:shadow-indigo-500/10 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
                 <p className={`text-2xl font-bold ${dueThisWeek > 0 ? "text-amber-500" : "text-gray-900 dark:text-slate-100"}`}>
                   {dueThisWeek}
                 </p>
                 <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">Due this week</p>
               </div>
-              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-center shadow-sm">
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:shadow-indigo-500/10 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
                 <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                   {avgGrade !== null ? `${avgGrade}%` : "—"}
                 </p>
@@ -1051,6 +1056,9 @@ export default function DashboardPage() {
                       : "Flashcards, practice tests, and exam cram — all in one place"}
             </p>
           </div>
+
+          {/* Tab content wrapper — keyed so it remounts (and animates in) on tab change */}
+          <div key={tab} className="animate-tab-fade-in">
 
           {/* ── This Week ── */}
           {tab === "week" && (
@@ -1538,6 +1546,8 @@ export default function DashboardPage() {
               />
             )
           )}
+
+          </div> {/* end tab content wrapper */}
         </main>
       </div>
 
@@ -1562,10 +1572,7 @@ export default function DashboardPage() {
           chapterName={flashcardSession.groupName}
           courseName={flashcardSession.cls.name}
           courseContext={flashcardSession.cls.rawText?.slice(0, 1500)}
-          onClose={() => {
-            setFlashcardSession(null);
-            setWeeklyStudyMinutes(getWeeklyStudyMinutes());
-          }}
+          onClose={() => setFlashcardSession(null)}
         />
       )}
 
@@ -1575,10 +1582,7 @@ export default function DashboardPage() {
           exam={cramSession.item}
           courseName={cramSession.cls.name}
           courseContext={cramSession.cls.rawText?.slice(0, 1500)}
-          onClose={() => {
-            setCramSession(null);
-            setWeeklyStudyMinutes(getWeeklyStudyMinutes());
-          }}
+          onClose={() => setCramSession(null)}
         />
       )}
 

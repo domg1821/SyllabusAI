@@ -27,6 +27,61 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+/* ── Keyframes ────────────────────────────────────────────────────────────── */
+
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes heroGradient {
+  0%, 100% { background-position: 0% 50%;   }
+  50%       { background-position: 100% 50%; }
+}
+
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%);  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0);   }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px);  }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px);  }
+}
+
+@keyframes correctGlow {
+  0%   { box-shadow: 0 0 0 0   rgba(34, 197, 94, 0.45); }
+  60%  { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);   }
+  100% { box-shadow: 0 0 0 0   rgba(34, 197, 94, 0);    }
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes flamePulse {
+  0%, 100% { transform: scale(1);             }
+  50%       { transform: scale(1.35) rotate(-5deg); }
+}
+
+@keyframes completePop {
+  0%   { transform: scale(1);    }
+  40%  { transform: scale(1.18); }
+  70%  { transform: scale(0.94); }
+  100% { transform: scale(1);    }
+}
+
+@keyframes progressFill {
+  from { width: 0%; }
+  to   { width: var(--progress-width, 100%); }
+}
+
+/* ── Utilities ───────────────────────────────────────────────────────────── */
+
 @layer utilities {
   .gradient-brand {
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
@@ -36,5 +91,74 @@ body {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  /* Page enter */
+  .animate-page-enter {
+    animation: pageEnter 350ms ease-out both;
+  }
+
+  /* Hero animated gradient background */
+  .hero-gradient-animate {
+    background: linear-gradient(-45deg, #eef2ff, #ede9fe, #f5f3ff, #eff6ff);
+    background-size: 400% 400%;
+    animation: heroGradient 18s ease infinite;
+  }
+  .dark .hero-gradient-animate {
+    background: linear-gradient(-45deg, #1e1b4b, #2e1065, #1e1b4b, #0c0a1e);
+    background-size: 400% 400%;
+  }
+
+  /* Tab fade-in on remount */
+  .animate-tab-fade-in {
+    animation: tabFadeIn 220ms ease-out both;
+  }
+
+  /* Wrong answer shake */
+  .animate-shake {
+    animation: shake 420ms ease-out;
+  }
+
+  /* Correct answer glow */
+  .animate-correct-glow {
+    animation: correctGlow 600ms ease-out;
+  }
+
+  /* Streak flame pulse */
+  .animate-flame {
+    display: inline-block;
+    animation: flamePulse 1.8s ease-in-out infinite;
+  }
+
+  /* Complete button pop */
+  .animate-complete-pop {
+    animation: completePop 350ms ease-out;
+  }
+
+  /* Progress bar fill-from-zero */
+  .animate-progress-fill {
+    animation: progressFill 800ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  /* Shimmer CTA button */
+  .btn-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.22) 50%,
+      transparent 65%
+    );
+    transform: translateX(-100%);
+    pointer-events: none;
+  }
+  .btn-shimmer:hover::after {
+    animation: shimmer 650ms ease-out;
   }
 }

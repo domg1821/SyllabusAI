@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { SavedClass, DeadlineItem, WeeklyTopic, StudySession, TestAttempt } from "@/lib/types";
 import { getStudySessions } from "@/lib/useStudySessions";
+import { HISTORY_KEY } from "@/lib/usePracticeTests";
 import TeachBackMode from "./TeachBackMode";
 import MemoryMapMode from "./MemoryMapMode";
 import ExamStyleMode from "./ExamStyleMode";
@@ -91,7 +92,7 @@ function RecommendationCard({
 
       let weakTopics: string[] = [];
       try {
-        const raw = localStorage.getItem("sai_test_history");
+        const raw = localStorage.getItem(HISTORY_KEY);
         const history: TestAttempt[] = raw ? JSON.parse(raw) : [];
         weakTopics = history
           .filter((t) => t.score >= 0 && t.score < 60)

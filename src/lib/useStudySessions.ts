@@ -16,6 +16,9 @@ export function saveStudySession(session: StudySession): void {
   sessions.unshift(session);
   if (sessions.length > 100) sessions.splice(100);
   localStorage.setItem(KEY, JSON.stringify(sessions));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("sai_session_saved"));
+  }
 }
 
 export function getWeeklyStudyMinutes(): number {

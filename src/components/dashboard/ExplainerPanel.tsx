@@ -60,14 +60,14 @@ export default function ExplainerPanel({ courseName, courseContext, initialConce
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative w-full max-w-sm bg-white shadow-2xl flex flex-col h-full">
+      <div className="relative w-full max-w-sm bg-white dark:bg-slate-800 shadow-2xl flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 shrink-0">
           <div>
             <p className="text-[10px] font-semibold text-violet-600 uppercase tracking-wider">
               AI Concept Explainer
             </p>
-            <h2 className="text-sm font-bold text-gray-900 truncate max-w-[200px]">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-slate-100 truncate max-w-[200px]">
               {courseName}
             </h2>
           </div>
@@ -96,7 +96,8 @@ export default function ExplainerPanel({ courseName, courseContext, initialConce
               onChange={(e) => setConcept(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleExplain()}
               placeholder="Type any concept or term…"
-              className="flex-1 min-w-0 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100 transition-all"
+              disabled={loading}
+              className="flex-1 min-w-0 rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 px-3 py-2 text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:border-violet-400 focus:bg-white dark:focus:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900/30 transition-all disabled:opacity-60"
             />
             <button
               onClick={handleExplain}

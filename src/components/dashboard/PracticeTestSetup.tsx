@@ -77,9 +77,21 @@ export default function PracticeTestSetup({
     if (initialTopic) setTopic(initialTopic);
   }, [initialTopic]);
   const maxQ = isPro ? PRO_MAX_QUESTIONS : FREE_MAX_QUESTIONS;
-  const [questionCount, setQuestionCount] = useState(Math.min(5, maxQ));
+  const [questionCount, setQuestionCount] = useState(() => {
+    try {
+      const saved = Number(localStorage.getItem("sai_default_count"));
+      if (saved >= 1 && saved <= maxQ) return saved;
+    } catch {}
+    return Math.min(5, maxQ);
+  });
   const [questionType, setQuestionType] = useState<QuestionType>("multiple_choice");
-  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [difficulty, setDifficulty] = useState<Difficulty>(() => {
+    try {
+      const saved = localStorage.getItem("sai_default_difficulty") as Difficulty | null;
+      if (saved && (["easy", "medium", "hard"] as Difficulty[]).includes(saved)) return saved;
+    } catch {}
+    return "medium";
+  });
 
   // Image upload state
   const [imagePreview, setImagePreview] = useState<string | null>(null);

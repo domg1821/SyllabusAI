@@ -47,7 +47,7 @@ export default function FlashcardMode({
   const [showExplainer, setShowExplainer] = useState(false);
   const [showHint, setShowHint] = useState(() => {
     if (typeof window === "undefined") return false;
-    return !localStorage.getItem("sai_flashcard_hint_shown");
+    try { return !localStorage.getItem("sai_flashcard_hint_shown"); } catch { return false; }
   });
 
   useEffect(() => {
@@ -239,8 +239,13 @@ export default function FlashcardMode({
                 </div>
                 <div className="h-1.5 w-full rounded-full bg-gray-100">
                   <div
-                    className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500"
-                    style={{ width: `${progressPct}%` }}
+                    className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 animate-progress-fill"
+                    style={{
+                      "--progress-width": `${progressPct}%`,
+                      animationDuration: "500ms",
+                      animationTimingFunction: "ease-out",
+                      animationFillMode: "both",
+                    } as React.CSSProperties}
                   />
                 </div>
               </div>
@@ -251,7 +256,7 @@ export default function FlashcardMode({
                 onClick={!isFlipped ? () => {
                   if (showHint) {
                     setShowHint(false);
-                    localStorage.setItem("sai_flashcard_hint_shown", "1");
+                    try { localStorage.setItem("sai_flashcard_hint_shown", "1"); } catch { /* ignore */ }
                   }
                   setIsFlipped(true);
                 } : undefined}
@@ -261,7 +266,7 @@ export default function FlashcardMode({
                   style={{
                     transformStyle: "preserve-3d",
                     transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
-                    transition: "transform 0.45s ease",
+                    transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
                     position: "relative",
                     height: "210px",
                   }}
@@ -332,7 +337,7 @@ export default function FlashcardMode({
                     </button>
                     <button
                       onClick={handleGotIt}
-                      className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-500 active:scale-[0.98] transition-all"
+                      className="animate-complete-pop flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-500 transition-colors"
                     >
                       <svg
                         className="h-4 w-4"
@@ -355,7 +360,7 @@ export default function FlashcardMode({
                     onClick={() => {
                       if (showHint) {
                         setShowHint(false);
-                        localStorage.setItem("sai_flashcard_hint_shown", "1");
+                        try { localStorage.setItem("sai_flashcard_hint_shown", "1"); } catch { /* ignore */ }
                       }
                       setIsFlipped(true);
                     }}

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { TestAttempt } from "./types";
 
-const HISTORY_KEY = "sai_test_history";
+export const HISTORY_KEY = "sai_test_history";
 
 export const FREE_WEEKLY_LIMIT = 2;
 export const FREE_MAX_QUESTIONS = 5;

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AnimateIn from "@/components/AnimateIn";
 
 const faqs = [
   {
@@ -25,56 +26,57 @@ const faqs = [
 
 export default function FAQ() {
   return (
-    <section id="faq" className="bg-gray-50 py-24">
+    <section id="faq" className="bg-gray-50 dark:bg-slate-900 py-24">
       <div className="mx-auto max-w-3xl px-6">
-        <div className="mb-14 text-center">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-indigo-600">
-            FAQ
-          </p>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-            Common questions
-          </h2>
-        </div>
+        <AnimateIn direction="up">
+          <div className="mb-14 text-center">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+              FAQ
+            </p>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-50 sm:text-4xl">
+              Common questions
+            </h2>
+          </div>
 
-        <div className="space-y-3">
-          {faqs.map(({ q, a }) => (
-            <details
-              key={q}
-              className="group rounded-2xl border border-gray-200 bg-white shadow-sm open:shadow-md transition-shadow"
+          <div className="space-y-3">
+            {faqs.map(({ q, a }) => (
+              <details
+                key={q}
+                className="group rounded-2xl border border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm shadow-sm open:shadow-md transition-all duration-200"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 text-sm font-semibold text-gray-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors [&::-webkit-details-marker]:hidden">
+                  {q}
+                  <svg
+                    className="h-4 w-4 shrink-0 text-gray-400 dark:text-slate-500 transition-transform duration-200 group-open:rotate-180"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </summary>
+                <div className="border-t border-gray-100 dark:border-slate-700 px-6 pb-5 pt-4">
+                  <p className="text-sm leading-relaxed text-gray-500 dark:text-slate-400">{a}</p>
+                </div>
+              </details>
+            ))}
+          </div>
+
+          <p className="mt-10 text-center text-sm text-gray-400 dark:text-slate-500">
+            Still have questions?{" "}
+            <a
+              href="mailto:domgbp21@gmail.com"
+              className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 text-sm font-semibold text-gray-900 hover:text-indigo-600 transition-colors [&::-webkit-details-marker]:hidden">
-                {q}
-                {/* chevron rotates when open */}
-                <svg
-                  className="h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 group-open:rotate-180"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                </svg>
-              </summary>
-              <div className="border-t border-gray-100 px-6 pb-5 pt-4">
-                <p className="text-sm leading-relaxed text-gray-500">{a}</p>
-              </div>
-            </details>
-          ))}
-        </div>
-
-        <p className="mt-10 text-center text-sm text-gray-400">
-          Still have questions?{" "}
-          <a
-            href="mailto:domgbp21@gmail.com"
-            className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
-          >
-            Email us
-          </a>{" "}
-          or check the{" "}
-          <Link href="/pricing" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
-            pricing page
-          </Link>.
-        </p>
+              Email us
+            </a>{" "}
+            or check the{" "}
+            <Link href="/pricing" className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors">
+              pricing page
+            </Link>.
+          </p>
+        </AnimateIn>
       </div>
     </section>
   );

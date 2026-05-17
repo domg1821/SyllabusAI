@@ -68,7 +68,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100">
         <ThemeProvider>
-          {children}
+          <div className="animate-page-enter min-h-full flex flex-col">
+            {children}
+          </div>
         </ThemeProvider>
       </body>
     </html>

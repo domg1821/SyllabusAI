@@ -23,6 +23,7 @@ function formatTimer(secs: number): string {
 
 function formatDuration(ms: number): string {
   const secs = Math.round(ms / 1000);
+  if (secs <= 0) return "0m";
   if (secs < 60) return `${secs}s`;
   const m = Math.floor(secs / 60);
   const s = secs % 60;
@@ -50,6 +51,11 @@ export default function CramMode({ exam, courseName, courseContext, onClose }: P
 
   // Countdown timer
   useEffect(() => {
+    // Always clear any running interval before potentially starting a new one
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
     if (phase !== "concepts" && phase !== "questions") return;
     if (timeLeft <= 0) {
       setPhase("summary");
@@ -67,7 +73,10 @@ export default function CramMode({ exam, courseName, courseContext, onClose }: P
       });
     }, 1000);
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
@@ -173,14 +182,14 @@ export default function CramMode({ exam, courseName, courseContext, onClose }: P
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 dark:border-slate-700 px-5 py-4">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-red-600">
               Exam Cram
             </p>
-            <h2 className="truncate text-sm font-bold text-gray-900">{exam.title}</h2>
+            <h2 className="truncate text-sm font-bold text-gray-900 dark:text-slate-100">{exam.title}</h2>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {(phase === "concepts" || phase === "questions") && (

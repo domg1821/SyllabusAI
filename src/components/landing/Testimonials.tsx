@@ -1,3 +1,5 @@
+import AnimateIn from "@/components/AnimateIn";
+
 const testimonials = [
   {
     initials: "JR",
@@ -30,75 +32,78 @@ const testimonials = [
 
 export default function Testimonials() {
   return (
-    <section className="bg-white py-24">
+    <section className="bg-white dark:bg-slate-900/50 py-24">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="mb-14 text-center">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-indigo-600">
-            Student Stories
-          </p>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-            Students who got their semester back
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-gray-500">
-            Real students, real results. Here&apos;s what happens when you stop guessing and start planning.
-          </p>
-        </div>
+        <AnimateIn direction="up">
+          <div className="mb-14 text-center">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+              Student Stories
+            </p>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-50 sm:text-4xl">
+              Students who got their semester back
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-lg text-gray-500 dark:text-slate-400">
+              Real students, real results. Here&apos;s what happens when you stop guessing and start planning.
+            </p>
+          </div>
+        </AnimateIn>
 
         <div className="grid gap-6 sm:grid-cols-3">
-          {testimonials.map((t) => (
-            <div
-              key={t.name}
-              className="flex flex-col rounded-2xl border border-gray-100 bg-white p-7 shadow-sm"
-            >
-              {/* Stars */}
-              <div className="mb-5 flex gap-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <svg
-                    key={i}
-                    className="h-4 w-4 fill-amber-400 text-amber-400"
-                    viewBox="0 0 24 24"
+          {testimonials.map((t, i) => (
+            <AnimateIn key={t.name} direction="up" delay={i * 100}>
+              <div className="flex h-full flex-col rounded-2xl border border-gray-100 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm p-7 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-200 cursor-default">
+                {/* Stars */}
+                <div className="mb-5 flex gap-1">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <svg
+                      key={idx}
+                      className="h-4 w-4 fill-amber-400 text-amber-400"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                  ))}
+                </div>
+
+                {/* Quote */}
+                <blockquote className="flex-1 text-sm leading-relaxed text-gray-600 dark:text-slate-300">
+                  &ldquo;{t.quote}&rdquo;
+                </blockquote>
+
+                {/* Author */}
+                <div className="mt-6 flex items-center gap-3">
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${t.color}`}
                   >
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                ))}
-              </div>
-
-              {/* Quote */}
-              <blockquote className="flex-1 text-sm leading-relaxed text-gray-600">
-                &ldquo;{t.quote}&rdquo;
-              </blockquote>
-
-              {/* Author */}
-              <div className="mt-6 flex items-center gap-3">
-                <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${t.color}`}
-                >
-                  {t.initials}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">{t.name}</p>
-                  <p className="text-xs text-gray-400">
-                    {t.major} · {t.university}
-                  </p>
+                    {t.initials}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{t.name}</p>
+                    <p className="text-xs text-gray-400 dark:text-slate-500">
+                      {t.major} · {t.university}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </AnimateIn>
           ))}
         </div>
 
         {/* Social proof strip */}
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-center">
-          {[
-            { stat: "4.9★", label: "Average rating" },
-            { stat: "2,000+", label: "Students using SyllabusAI" },
-            { stat: "50+", label: "Universities represented" },
-          ].map((s) => (
-            <div key={s.stat}>
-              <p className="text-2xl font-extrabold text-gray-900">{s.stat}</p>
-              <p className="mt-0.5 text-sm text-gray-400">{s.label}</p>
-            </div>
-          ))}
-        </div>
+        <AnimateIn direction="up" delay={200}>
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-center">
+            {[
+              { stat: "4.9★", label: "Average rating" },
+              { stat: "2,000+", label: "Students using SyllabusAI" },
+              { stat: "50+", label: "Universities represented" },
+            ].map((s) => (
+              <div key={s.stat}>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-slate-100">{s.stat}</p>
+                <p className="mt-0.5 text-sm text-gray-400 dark:text-slate-500">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </AnimateIn>
       </div>
     </section>
   );
