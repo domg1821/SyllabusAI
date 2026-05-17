@@ -217,7 +217,7 @@ export default function Features() {
             </div>
           </AnimateIn>
 
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             {studySmarter.map((f, i) => {
               const c = colorMap[f.color];
               return (
@@ -262,7 +262,7 @@ export default function Features() {
             </div>
           </AnimateIn>
 
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             {personas.map((p, i) => (
               <AnimateIn key={p.type} direction="up" delay={i * 100}>
                 <div className={`h-full rounded-2xl border p-7 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg cursor-default ${p.accent}`}>

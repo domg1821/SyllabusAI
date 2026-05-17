@@ -110,7 +110,7 @@ export default function SignInPage() {
       </div>
 
       {/* ── Right panel: form ── */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:px-16">
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-12 lg:px-16">
         {/* Mobile logo */}
         <Link href="/" className="mb-8 flex items-center gap-2.5 lg:hidden">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm">
@@ -123,7 +123,7 @@ export default function SignInPage() {
 
         <div className="w-full max-w-sm">
           {/* Form card */}
-          <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 shadow-sm">
+          <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 sm:p-8 shadow-sm">
             {/* Header */}
             <div className="mb-6">
               <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm">

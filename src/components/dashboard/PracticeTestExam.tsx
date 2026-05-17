@@ -230,7 +230,7 @@ function MCAnswerInput({
   onAnswer: (letter: string) => void;
 }) {
   return (
-    <div className="ml-11 space-y-2.5">
+    <div className="ml-6 sm:ml-11 space-y-2.5">
       {question.options
         .filter((opt) => opt.trim().length > 0)
         .map((option) => {
@@ -329,7 +329,7 @@ function SAAnswerInput({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="ml-11">
+    <div className="ml-6 sm:ml-11">
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}

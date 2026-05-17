@@ -634,7 +634,7 @@ export default function CoursesDashboard({
               className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
             >
               {/* Course header row */}
-              <div className="flex items-center gap-4 px-5 py-4">
+              <div className="flex items-center gap-3 px-4 py-4 sm:gap-4 sm:px-5">
                 <button
                   onClick={() => openClass(isExpanded ? null : cls.id)}
                   className="min-w-0 flex-1 text-left"
@@ -748,7 +748,7 @@ export default function CoursesDashboard({
 
               {/* Expanded content */}
               {isExpanded && (
-                <div className="border-t border-gray-100 px-5 py-4">
+                <div className="border-t border-gray-100 px-4 py-4 sm:px-5">
                   {/* Sub-nav + export button */}
                   <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 w-fit">

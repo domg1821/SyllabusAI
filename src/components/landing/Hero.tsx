@@ -12,7 +12,7 @@ export default function Hero() {
       <div aria-hidden className="pointer-events-none absolute -right-24 top-12 -z-10 h-80 w-80 rounded-full bg-violet-500 opacity-[0.08] dark:opacity-[0.12] blur-3xl" />
       <div aria-hidden className="pointer-events-none absolute bottom-0 left-1/2 -z-10 h-64 w-96 -translate-x-1/2 rounded-full bg-purple-400 opacity-[0.05] dark:opacity-[0.08] blur-3xl" />
 
-      <div className="mx-auto max-w-5xl px-6 text-center">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 text-center">
         {/* Badge */}
         <AnimateIn direction="fade">
           <div className="mb-8 flex justify-center">
@@ -28,9 +28,8 @@ export default function Hero() {
 
         {/* Headline */}
         <AnimateIn direction="up">
-          <h1 className="text-5xl font-extrabold leading-[1.1] tracking-tight text-gray-900 dark:text-slate-50 sm:text-6xl lg:text-7xl">
-            The AI study partner that
-            <br />
+          <h1 className="text-4xl font-extrabold leading-[1.15] tracking-tight text-gray-900 dark:text-slate-50 sm:text-5xl lg:text-7xl">
+            The AI study partner that{" "}
             <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
               actually knows your syllabus.
             </span>
@@ -87,7 +86,7 @@ export default function Hero() {
       </div>
 
       {/* App preview mockup */}
-      <AnimateIn direction="up" delay={150} className="mx-auto mt-20 max-w-5xl px-6">
+      <AnimateIn direction="up" delay={150} className="mx-auto mt-16 max-w-5xl px-4 sm:px-6">
         <div className="overflow-hidden rounded-2xl border border-gray-200/80 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 shadow-2xl dark:shadow-slate-900/60 ring-1 ring-gray-100 dark:ring-slate-700 backdrop-blur-sm hover:shadow-[0_32px_80px_-12px_rgba(99,102,241,0.18)] transition-shadow duration-500">
           {/* Fake browser chrome */}
           <div className="flex items-center gap-2 border-b border-gray-100 dark:border-slate-700 bg-gray-50/80 dark:bg-slate-900/60 px-4 py-3">

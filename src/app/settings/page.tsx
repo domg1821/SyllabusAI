@@ -317,7 +317,7 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col">
       <DashboardNav isPro={isPro} onUpgradeClick={handleUpgrade} />
 
-      <main className="flex-1 mx-auto w-full max-w-2xl px-6 py-12">
+      <main className="flex-1 mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
         {/* Page header */}
         <div className="mb-8 flex items-center justify-between">
           <div>

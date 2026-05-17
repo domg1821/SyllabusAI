@@ -129,8 +129,8 @@ export default function FlashcardMode({
   const duration = completedAt ? completedAt - startTime : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-0 sm:p-4">
+      <div className="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[95dvh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="min-w-0 flex-1">
@@ -268,7 +268,7 @@ export default function FlashcardMode({
                     transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
                     transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
                     position: "relative",
-                    height: "210px",
+                    height: "clamp(160px, 30vw, 210px)",
                   }}
                 >
                   {/* Front */}

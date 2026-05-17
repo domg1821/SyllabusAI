@@ -959,7 +959,7 @@ export default function DashboardPage() {
           onOpenCalendar={classes.length > 0 ? () => setCalendarOpen(true) : undefined}
         />
 
-        <main className="flex-1 mx-auto w-full max-w-5xl px-6 py-12">
+        <main className="flex-1 mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
           {/* Checkout banners */}
           {checkoutBanner === "success" && (
             <div className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4">
@@ -1003,8 +1003,8 @@ export default function DashboardPage() {
           {/* Stats bar */}
           {!classesLoading && (streak > 0 || classes.length > 0) && (
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-              <div className="rounded-xl border border-orange-200 bg-orange-50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-indigo-500/10 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-                <p className="text-2xl font-bold text-orange-500">
+              <div className="rounded-xl border border-orange-200 bg-orange-50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-indigo-500/10 p-3 sm:p-4 text-center shadow-sm hover:shadow-md transition-shadow">
+                <p className="text-xl sm:text-2xl font-bold text-orange-500">
                   {streak > 0 ? <span className="animate-flame">🔥</span> : "🔥"}{" "}{streak}
                 </p>
                 <p className="mt-0.5 text-xs text-orange-600 dark:text-slate-400">Day streak</p>
@@ -1017,18 +1017,18 @@ export default function DashboardPage() {
                   </p>
                 )}
               </div>
-              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:shadow-indigo-500/10 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-                <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{classes.length}</p>
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:shadow-indigo-500/10 p-3 sm:p-4 text-center shadow-sm hover:shadow-md transition-shadow">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">{classes.length}</p>
                 <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">Course{classes.length !== 1 ? "s" : ""}</p>
               </div>
-              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:shadow-indigo-500/10 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-                <p className={`text-2xl font-bold ${dueThisWeek > 0 ? "text-amber-500" : "text-gray-900 dark:text-slate-100"}`}>
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:shadow-indigo-500/10 p-3 sm:p-4 text-center shadow-sm hover:shadow-md transition-shadow">
+                <p className={`text-xl sm:text-2xl font-bold ${dueThisWeek > 0 ? "text-amber-500" : "text-gray-900 dark:text-slate-100"}`}>
                   {dueThisWeek}
                 </p>
                 <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">Due this week</p>
               </div>
-              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:shadow-indigo-500/10 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
-                <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:shadow-indigo-500/10 p-3 sm:p-4 text-center shadow-sm hover:shadow-md transition-shadow">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">
                   {avgGrade !== null ? `${avgGrade}%` : "—"}
                 </p>
                 <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">Avg grade</p>
@@ -1595,7 +1595,7 @@ export default function DashboardPage() {
 
       {/* Calendar overlay */}
       {calendarOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm p-4 pt-16 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm p-3 pt-4 sm:p-4 sm:pt-16 overflow-y-auto">
           <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl ring-1 ring-black/10 dark:ring-white/10">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700">
               <h2 className="text-base font-bold text-gray-900 dark:text-slate-100">Deadline Calendar</h2>

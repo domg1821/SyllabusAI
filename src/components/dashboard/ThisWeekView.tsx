@@ -318,7 +318,7 @@ export default function ThisWeekView({
     <div className="space-y-6">
       {/* ── Panic banner ── */}
       {panicItem && onGoToPractice && (
-        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4">
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-4 sm:px-5">
           <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100">
             <svg className="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
@@ -412,7 +412,7 @@ export default function ThisWeekView({
             }`}
           >
             {/* Day header */}
-            <div className={`flex items-center justify-between px-5 py-3 ${
+            <div className={`flex items-center justify-between px-4 py-3 sm:px-5 ${
               d.wd.isToday
                 ? "bg-indigo-600"
                 : d.wd.isPast
@@ -439,7 +439,7 @@ export default function ThisWeekView({
 
             {/* Content */}
             {isEmpty ? (
-              <div className={`px-5 py-4 text-sm ${d.wd.isPast ? "text-gray-300" : "text-gray-400"}`}>
+              <div className={`px-4 py-4 text-sm sm:px-5 ${d.wd.isPast ? "text-gray-300" : "text-gray-400"}`}>
                 🎉 Free day
               </div>
             ) : (
