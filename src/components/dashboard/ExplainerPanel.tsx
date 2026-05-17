@@ -57,7 +57,7 @@ export default function ExplainerPanel({ courseName, courseContext, initialConce
   return (
     <div className="fixed inset-0 z-[60] flex justify-end">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px]" onClick={onClose} />
 
       {/* Panel */}
       <div className="relative w-full max-w-sm bg-white dark:bg-slate-800 shadow-2xl flex flex-col h-full">
