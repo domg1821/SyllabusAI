@@ -516,7 +516,10 @@ export default function DashboardPage() {
   const [showModal, setShowModal] = useState(false);
   const [checkoutBanner, setCheckoutBanner] = useState<"success" | "cancel" | null>(null);
   const [streak, setStreak] = useState(0);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try { return typeof window !== "undefined" && !localStorage.getItem("sai_onboarded"); }
+    catch { return false; }
+  });
   const [weeklyStudyMinutes, setWeeklyStudyMinutes] = useState(0);
 
   // Flashcard / cram / explainer overlays
@@ -576,12 +579,6 @@ export default function DashboardPage() {
     return () => window.removeEventListener("sai_session_saved", refresh);
   }, []);
 
-  // ── Onboarding ──
-  useEffect(() => {
-    if (!localStorage.getItem("sai_onboarded")) {
-      setShowOnboarding(true);
-    }
-  }, []);
 
   // Handle Stripe return — runs once on mount, reads URL params client-side
   React.useEffect(() => {
