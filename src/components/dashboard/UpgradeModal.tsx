@@ -191,17 +191,16 @@ export default function UpgradeModal({ open, onClose, defaultPeriod = "monthly" 
           {/* ── Billing toggle ── */}
           <div className="mb-5 flex justify-center">
             <div className="relative inline-flex rounded-full border border-gray-200 bg-gray-100 p-1">
-              {/* Sliding pill */}
+              {/* Sliding pill — anchored left, slides right by its own width */}
               <span
                 aria-hidden
-                className={`absolute top-1 h-[calc(100%-8px)] w-[calc(50%-4px)] rounded-full bg-white shadow-sm transition-all duration-200 ease-out ${
-                  isYearly ? "left-[calc(50%+0px)]" : "left-1"
-                }`}
+                className="absolute left-1 top-1 h-[calc(100%-8px)] w-[calc(50%-4px)] rounded-full bg-white shadow-sm transition-transform duration-200 ease-out"
+                style={{ transform: isYearly ? "translateX(100%)" : "translateX(0)" }}
               />
               <button
                 onClick={() => setPeriod("monthly")}
                 disabled={loading}
-                className={`relative z-10 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors duration-150 ${
+                className={`relative z-10 w-24 rounded-full py-1.5 text-sm font-semibold transition-colors duration-150 ${
                   !isYearly ? "text-gray-900" : "text-gray-500 hover:text-gray-700"
                 }`}
               >

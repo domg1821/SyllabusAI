@@ -70,16 +70,15 @@ export default function PricingCards({ onUpgradeClick, variant = "landing" }: Pr
       {/* ── Billing toggle ── */}
       <div className="mb-10 flex flex-col items-center gap-3">
         <div className="relative inline-flex rounded-full border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 p-1">
-          {/* Sliding pill */}
+          {/* Sliding pill — fixed width, slides by translateX(100%) so it always lands under Yearly */}
           <span
             aria-hidden
-            className={`absolute top-1 h-[calc(100%-8px)] w-[calc(50%-4px)] rounded-full bg-white dark:bg-slate-700 shadow-sm transition-all duration-200 ease-out ${
-              isYearly ? "left-[calc(50%+0px)]" : "left-1"
-            }`}
+            className="absolute left-1 top-1 h-[calc(100%-8px)] w-[calc(50%-4px)] rounded-full bg-white dark:bg-slate-700 shadow-sm transition-transform duration-200 ease-out"
+            style={{ transform: isYearly ? "translateX(100%)" : "translateX(0)" }}
           />
           <button
             onClick={() => setPeriod("monthly")}
-            className={`relative z-10 rounded-full px-5 py-1.5 text-sm font-semibold transition-colors duration-150 ${
+            className={`relative z-10 w-24 rounded-full py-1.5 text-sm font-semibold transition-colors duration-150 ${
               !isYearly
                 ? "text-gray-900 dark:text-slate-100"
                 : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
@@ -89,15 +88,15 @@ export default function PricingCards({ onUpgradeClick, variant = "landing" }: Pr
           </button>
           <button
             onClick={() => setPeriod("yearly")}
-            className={`relative z-10 flex items-center gap-2 rounded-full px-5 py-1.5 text-sm font-semibold transition-colors duration-150 ${
+            className={`relative z-10 flex w-24 items-center justify-center gap-1.5 rounded-full py-1.5 text-sm font-semibold transition-colors duration-150 ${
               isYearly
                 ? "text-gray-900 dark:text-slate-100"
                 : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300"
             }`}
           >
             Yearly
-            <span className="inline-flex items-center rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white leading-none">
-              {PRO_YEARLY_DISCOUNT_PCT}% OFF
+            <span className="inline-flex items-center rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
+              {PRO_YEARLY_DISCOUNT_PCT}%
             </span>
           </button>
         </div>
