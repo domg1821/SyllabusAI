@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { usePro } from "@/lib/usePro";
 import { ProBadge } from "@/components/dashboard/UpgradeModal";
+import { PRO_PRICE_MONTHLY, PRO_PRICE_YEARLY } from "@/lib/constants";
 import DashboardNav from "@/components/dashboard/DashboardNav";
 import { useTheme } from "@/components/ThemeProvider";
 import { Difficulty } from "@/lib/types";
@@ -194,7 +195,11 @@ export default function SettingsPage() {
     setCheckoutLoading(true);
     setCheckoutError(null);
     try {
-      const res = await fetch("/api/checkout", { method: "POST" });
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ billingPeriod: "monthly" }),
+      });
       const json = await res.json();
       if (!res.ok || !json.url) {
         setCheckoutError(json.error ?? "Could not start checkout. Please try again.");
@@ -465,7 +470,7 @@ export default function SettingsPage() {
                           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
                           </svg>
-                          Upgrade to Pro — $5/month
+                          Upgrade to Pro — ${PRO_PRICE_MONTHLY}/mo or ${PRO_PRICE_YEARLY}/yr
                         </>
                       )}
                     </button>

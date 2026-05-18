@@ -4,9 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
   const secretKey = process.env.STRIPE_SECRET_KEY;
-  const priceId = process.env.STRIPE_PRICE_ID;
+  const monthlyPriceId = process.env.STRIPE_PRICE_ID;
+  const yearlyPriceId = process.env.STRIPE_PRICE_ID_YEARLY;
 
-  if (!secretKey || !priceId) {
+  if (!secretKey || !monthlyPriceId) {
     return NextResponse.json(
       { error: "Stripe is not configured on this server." },
       { status: 500 }
@@ -23,6 +24,24 @@ export async function POST(req: NextRequest) {
       { error: "Payment system is not configured for production. Contact support." },
       { status: 503 }
     );
+  }
+
+  // Parse billing period from request body — defaults to monthly
+  let billingPeriod: "monthly" | "yearly" = "monthly";
+  try {
+    const body = await req.json();
+    if (body?.billingPeriod === "yearly") billingPeriod = "yearly";
+  } catch {
+    // No body or invalid JSON — treat as monthly
+  }
+
+  // Choose the correct Stripe price ID
+  const isYearly = billingPeriod === "yearly";
+  const priceId = isYearly ? (yearlyPriceId ?? monthlyPriceId) : monthlyPriceId;
+
+  // If yearly was requested but no yearly price ID is set, fall back to monthly
+  if (isYearly && !yearlyPriceId) {
+    console.warn("[checkout] STRIPE_PRICE_ID_YEARLY not set — falling back to monthly price.");
   }
 
   // Require an authenticated session — user_id goes into Stripe metadata
@@ -46,7 +65,7 @@ export async function POST(req: NextRequest) {
       // Pre-fill email so the user doesn't have to type it
       customer_email: user.email,
       // user_id in metadata lets the webhook find the right Supabase profile
-      metadata: { user_id: user.id },
+      metadata: { user_id: user.id, billing_period: billingPeriod },
       // {CHECKOUT_SESSION_ID} is a Stripe template variable — replaced at redirect time
       success_url: `${origin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/dashboard?checkout=cancel`,

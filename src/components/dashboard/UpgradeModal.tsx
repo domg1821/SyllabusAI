@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { PRO_PRICE_MONTHLY } from "@/lib/constants";
+import {
+  PRO_PRICE_MONTHLY,
+  PRO_PRICE_YEARLY,
+  PRO_PRICE_YEARLY_FULL,
+  PRO_YEARLY_DISCOUNT_PCT,
+} from "@/lib/constants";
+import type { BillingPeriod } from "@/components/pricing/PricingCards";
+
 // ─── Pro Badge ─────────────────────────────────────────────────────────────────
 
 export function ProBadge({ className = "" }: { className?: string }) {
@@ -82,29 +89,37 @@ export function LockedFeatureCard({
 const FEATURES = [
   "Unlimited syllabus & assignment analyses",
   "Smart weekly study plan generation",
-  "Full assignment breakdown with step-by-step action plan",
+  "Teach It Back, Memory Map & Exam Style modes",
+  "Full practice test history & weak area tracking",
+  "Study progress dashboard & heatmap",
   "Track multiple courses at once",
-  "Priority AI processing",
 ];
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** Pre-select a billing period (e.g. when user clicks a specific plan CTA) */
+  defaultPeriod?: BillingPeriod;
 }
 
-export default function UpgradeModal({ open, onClose }: Props) {
+export default function UpgradeModal({ open, onClose, defaultPeriod = "monthly" }: Props) {
   const [loading, setLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<BillingPeriod>(defaultPeriod);
+
+  const isYearly = period === "yearly";
+  const monthlyEquiv = (PRO_PRICE_YEARLY / 12).toFixed(2);
 
   useEffect(() => {
     if (!open) return;
     setCheckoutError(null);
+    setPeriod(defaultPeriod);
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape" && !loading) onClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, loading]);
+  }, [open, onClose, loading, defaultPeriod]);
 
   if (!open) return null;
 
@@ -112,7 +127,11 @@ export default function UpgradeModal({ open, onClose }: Props) {
     setLoading(true);
     setCheckoutError(null);
     try {
-      const res = await fetch("/api/checkout", { method: "POST" });
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ billingPeriod: period }),
+      });
       const json = await res.json();
 
       if (!res.ok || !json.sessionId) {
@@ -125,7 +144,6 @@ export default function UpgradeModal({ open, onClose }: Props) {
         return;
       }
 
-      // Navigate to Stripe Checkout — page will leave, no need to close modal
       window.location.href = json.url;
     } catch {
       setCheckoutError("Network error. Please check your connection and try again.");
@@ -135,7 +153,7 @@ export default function UpgradeModal({ open, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
@@ -143,12 +161,12 @@ export default function UpgradeModal({ open, onClose }: Props) {
       />
 
       {/* Panel */}
-      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-gray-200">
+      <div className="relative w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl ring-1 ring-gray-200 max-h-[95dvh] overflow-y-auto">
         {/* Close */}
         <button
           onClick={onClose}
           disabled={loading}
-          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 transition-colors"
+          className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 transition-colors"
           aria-label="Close"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -156,53 +174,95 @@ export default function UpgradeModal({ open, onClose }: Props) {
           </svg>
         </button>
 
-        <div className="p-8">
+        <div className="p-6 sm:p-8">
           {/* Header */}
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-200">
-              <svg
-                className="h-7 w-7 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"
-                />
+          <div className="mb-5 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-200">
+              <svg className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Upgrade to Pro</h2>
-            <p className="mt-1.5 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-500">
               Everything you need to get through the semester — stress-free.
             </p>
           </div>
 
-          {/* Pricing */}
-          <div className="mb-6 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-5 text-center ring-1 ring-indigo-100">
-            <div className="flex items-baseline justify-center gap-1">
-              <span className="text-4xl font-extrabold text-gray-900">${PRO_PRICE_MONTHLY}</span>
-              <span className="text-base text-gray-500">/ month</span>
+          {/* ── Billing toggle ── */}
+          <div className="mb-5 flex justify-center">
+            <div className="relative inline-flex rounded-full border border-gray-200 bg-gray-100 p-1">
+              {/* Sliding pill */}
+              <span
+                aria-hidden
+                className={`absolute top-1 h-[calc(100%-8px)] w-[calc(50%-4px)] rounded-full bg-white shadow-sm transition-all duration-200 ease-out ${
+                  isYearly ? "left-[calc(50%+0px)]" : "left-1"
+                }`}
+              />
+              <button
+                onClick={() => setPeriod("monthly")}
+                disabled={loading}
+                className={`relative z-10 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors duration-150 ${
+                  !isYearly ? "text-gray-900" : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setPeriod("yearly")}
+                disabled={loading}
+                className={`relative z-10 flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors duration-150 ${
+                  isYearly ? "text-gray-900" : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Yearly
+                <span className="inline-flex items-center rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
+                  {PRO_YEARLY_DISCOUNT_PCT}% OFF
+                </span>
+              </button>
             </div>
-            <p className="mt-1 text-xs font-semibold text-indigo-600 uppercase tracking-wide">
-              Student pricing · Cancel anytime
-            </p>
+          </div>
+
+          {/* ── Price box ── */}
+          <div className={`mb-5 rounded-xl p-4 text-center ring-1 transition-colors ${
+            isYearly
+              ? "bg-gradient-to-br from-emerald-50 to-teal-50 ring-emerald-200"
+              : "bg-gradient-to-br from-indigo-50 to-violet-50 ring-indigo-100"
+          }`}>
+            {isYearly ? (
+              <>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-4xl font-extrabold text-gray-900">${PRO_PRICE_YEARLY}</span>
+                  <span className="text-base text-gray-500">/ year</span>
+                  <span className="rounded-md bg-white px-1.5 py-0.5 text-xs font-bold text-gray-400 line-through">
+                    ${PRO_PRICE_YEARLY_FULL}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm font-semibold text-emerald-700">
+                  = ${monthlyEquiv}/mo — you save ${PRO_PRICE_YEARLY_FULL - PRO_PRICE_YEARLY} a year
+                </p>
+                <p className="mt-0.5 text-xs font-medium text-emerald-600 uppercase tracking-wide">
+                  Best value · Billed once yearly · Cancel anytime
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-baseline justify-center gap-1">
+                  <span className="text-4xl font-extrabold text-gray-900">${PRO_PRICE_MONTHLY}</span>
+                  <span className="text-base text-gray-500">/ month</span>
+                </div>
+                <p className="mt-1 text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+                  Student pricing · Cancel anytime
+                </p>
+              </>
+            )}
           </div>
 
           {/* Features */}
-          <ul className="mb-6 space-y-3">
+          <ul className="mb-5 space-y-2.5">
             {FEATURES.map((f, i) => (
               <li key={i} className="flex items-start gap-3">
                 <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100">
-                  <svg
-                    className="h-3 w-3 text-indigo-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={3}
-                  >
+                  <svg className="h-3 w-3 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                   </svg>
                 </div>
@@ -222,7 +282,11 @@ export default function UpgradeModal({ open, onClose }: Props) {
           <button
             onClick={handleCheckout}
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 py-3 text-sm font-bold text-white shadow-md shadow-indigo-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed transition-all"
+            className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white shadow-md hover:opacity-90 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed transition-all ${
+              isYearly
+                ? "bg-gradient-to-r from-emerald-500 to-teal-600 shadow-emerald-200"
+                : "bg-gradient-to-r from-indigo-500 to-violet-600 shadow-indigo-200"
+            }`}
           >
             {loading ? (
               <>
@@ -232,12 +296,14 @@ export default function UpgradeModal({ open, onClose }: Props) {
                 </svg>
                 Redirecting to checkout…
               </>
+            ) : isYearly ? (
+              `Get Pro — $${PRO_PRICE_YEARLY}/year`
             ) : (
-              `Upgrade to Pro — $${PRO_PRICE_MONTHLY}/month`
+              `Get Pro — $${PRO_PRICE_MONTHLY}/month`
             )}
           </button>
           <p className="mt-3 text-center text-xs text-gray-400">
-            Secure checkout via Stripe · Cancel anytime
+            Secure checkout via Stripe · 30-day money-back guarantee
           </p>
         </div>
       </div>
