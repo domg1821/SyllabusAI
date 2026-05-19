@@ -110,16 +110,22 @@ export default function UpgradeModal({ open, onClose, defaultPeriod = "monthly" 
   const isYearly = period === "yearly";
   const monthlyEquiv = (PRO_PRICE_YEARLY / 12).toFixed(2);
 
+  // Reset state only when the modal opens — NOT when loading changes
   useEffect(() => {
     if (!open) return;
     setCheckoutError(null);
     setPeriod(defaultPeriod);
+  }, [open, defaultPeriod]);
+
+  // Escape key — separate effect so it never triggers a period reset
+  useEffect(() => {
+    if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && !loading) onClose();
+      if (e.key === "Escape") onClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, loading, defaultPeriod]);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -209,13 +215,13 @@ export default function UpgradeModal({ open, onClose, defaultPeriod = "monthly" 
               <button
                 onClick={() => setPeriod("yearly")}
                 disabled={loading}
-                className={`relative z-10 flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors duration-150 ${
+                className={`relative z-10 flex w-24 items-center justify-center gap-1.5 rounded-full py-1.5 text-sm font-semibold transition-colors duration-150 ${
                   isYearly ? "text-gray-900" : "text-gray-500 hover:text-gray-700"
                 }`}
               >
                 Yearly
                 <span className="inline-flex items-center rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
-                  {PRO_YEARLY_DISCOUNT_PCT}% OFF
+                  {PRO_YEARLY_DISCOUNT_PCT}%
                 </span>
               </button>
             </div>
