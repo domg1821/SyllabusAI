@@ -20,43 +20,32 @@ function ResetPasswordForm() {
   useEffect(() => {
     async function verify() {
       const supabase = createClient();
-      const tokenHash = searchParams.get("token_hash");
-      const type = searchParams.get("type");
 
-      // PKCE flow: token_hash + type=recovery in URL params
-      if (tokenHash && type === "recovery") {
-        const { error } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
-          type: "recovery",
-        });
-        setStatus(error ? "invalid" : "form");
-        return;
-      }
-
-      // Fallback: check for an existing recovery session (implicit/hash flow)
+      // Token is verified server-side in /auth/callback before landing here.
+      // Just confirm we have an active recovery session.
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setStatus("form");
         return;
       }
 
-      // Also listen for PASSWORD_RECOVERY event (hash-fragment based flow)
+      // Listen for PASSWORD_RECOVERY event (fires when session is established)
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-        if (event === "PASSWORD_RECOVERY") {
+        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
           setStatus("form");
         }
       });
 
-      // No token found at all
+      // If nothing fires after 2s, the link is invalid/expired
       setTimeout(() => {
         setStatus((s) => s === "verifying" ? "invalid" : s);
-      }, 1500);
+      }, 2000);
 
       return () => subscription.unsubscribe();
     }
 
     verify();
-  }, [searchParams]);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
