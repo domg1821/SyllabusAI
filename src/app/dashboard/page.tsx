@@ -1541,7 +1541,7 @@ export default function DashboardPage() {
                 onOpenExplainer={(concept, cls) => setExplainerSession({ concept, cls })}
                 onOpenCram={(item, cls) => setCramSession({ item, cls })}
                 onAddNew={() => { setTab("analyze"); setAnalyzeMode("syllabus"); }}
-                onUpgrade={() => setUpgradeModalOpen(true)}
+                onUpgrade={() => setShowModal(true)}
               />
             )
           )}
