@@ -14,15 +14,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Guard: prevent accidentally charging real money with test keys in production.
+  // Log a warning if using test keys in production, but allow it through for testing.
   if (process.env.NODE_ENV === "production" && secretKey.startsWith("sk_test_")) {
-    console.error(
-      "[checkout] MISCONFIGURATION: STRIPE_SECRET_KEY is a test key but NODE_ENV is production. " +
-      "Set STRIPE_SECRET_KEY to a live key (sk_live_...) before taking real payments."
-    );
-    return NextResponse.json(
-      { error: "Payment system is not configured for production. Contact support." },
-      { status: 503 }
+    console.warn(
+      "[checkout] Using Stripe test key in production — OK for testing, but swap to sk_live_ before real payments."
     );
   }
 
