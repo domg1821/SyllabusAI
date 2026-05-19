@@ -1532,6 +1532,7 @@ export default function DashboardPage() {
             ) : (
               <StudyHub
                 classes={classes}
+                isPro={isPro}
                 onOpenPracticeTest={(topic) => {
                   setPracticeInitialTopic(topic);
                   setTab("practice");
@@ -1540,6 +1541,7 @@ export default function DashboardPage() {
                 onOpenExplainer={(concept, cls) => setExplainerSession({ concept, cls })}
                 onOpenCram={(item, cls) => setCramSession({ item, cls })}
                 onAddNew={() => { setTab("analyze"); setAnalyzeMode("syllabus"); }}
+                onUpgrade={() => setUpgradeModalOpen(true)}
               />
             )
           )}

@@ -4,6 +4,195 @@ import React, { useState } from "react";
 import { AssignmentAnalysis } from "@/lib/types";
 import { LockedFeatureCard, ProBadge } from "./UpgradeModal";
 
+// ─── Draft Feedback section ────────────────────────────────────────────────────
+
+interface FeedbackResult {
+  strengths: string[];
+  improvements: string[];
+  overallImpression: string;
+  rubricComments?: { criterion: string; comment: string }[];
+}
+
+function DraftFeedbackSection({
+  result,
+  isPro,
+  onUpgrade,
+}: {
+  result: AssignmentAnalysis;
+  isPro: boolean;
+  onUpgrade: () => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<FeedbackResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function getFeedback() {
+    if (!draft.trim() || loading) return;
+    setLoading(true);
+    setError(null);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/assignment-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          draftText: draft,
+          rubricNotes: result.rubricNotes,
+          title: result.title,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.feedback) {
+        setError(json.error ?? "Could not get feedback. Try again.");
+        return;
+      }
+      setFeedback(json.feedback);
+    } catch {
+      setError("Network error. Check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!isPro) {
+    return (
+      <LockedFeatureCard
+        title="Draft Feedback"
+        description="Paste your draft and get rubric-based AI feedback before submitting."
+        onUpgrade={onUpgrade}
+        preview={
+          <div className="p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-gray-300">✏️</span>
+              <span className="text-sm font-semibold text-gray-400">Draft Feedback</span>
+            </div>
+            <div className="h-16 rounded-lg bg-gray-100" />
+            <div className="mt-3 space-y-1.5">
+              {[1, 2].map((n) => (
+                <div key={n} className="flex gap-2 items-center">
+                  <span className="h-2 w-2 rounded-full bg-emerald-200 shrink-0" />
+                  <div className="h-3 w-48 rounded-full bg-gray-200" />
+                </div>
+              ))}
+            </div>
+          </div>
+        }
+      />
+    );
+  }
+
+  return (
+    <SectionCard
+      title="Draft Feedback"
+      badge={<ProBadge />}
+      icon={<span className="text-base">✏️</span>}
+    >
+      {!feedback ? (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-500">
+            Paste your draft below and get AI feedback based on the rubric before you submit.
+          </p>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Paste your draft here…"
+            rows={6}
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all resize-none"
+          />
+          {error && (
+            <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-600">
+              {error}
+            </p>
+          )}
+          <button
+            onClick={getFeedback}
+            disabled={!draft.trim() || loading}
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+          >
+            {loading ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Analysing draft…
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                </svg>
+                Get Feedback
+              </>
+            )}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Overall impression */}
+          <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-indigo-600 mb-1">Overall Impression</p>
+            <p className="text-sm text-gray-700 leading-relaxed">{feedback.overallImpression}</p>
+          </div>
+
+          {/* Strengths */}
+          {feedback.strengths?.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-emerald-600">✓ What&apos;s Working</p>
+              <ul className="space-y-1.5">
+                {feedback.strengths.map((s, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Improvements */}
+          {feedback.improvements?.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-600">⚠ Needs Improvement</p>
+              <ul className="space-y-1.5">
+                {feedback.improvements.map((s, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Rubric comments */}
+          {feedback.rubricComments && feedback.rubricComments.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">Rubric Breakdown</p>
+              <div className="space-y-2">
+                {feedback.rubricComments.map((rc, i) => (
+                  <div key={i} className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                    <p className="text-xs font-semibold text-gray-700">{rc.criterion}</p>
+                    <p className="mt-0.5 text-xs text-gray-500">{rc.comment}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => { setFeedback(null); setDraft(""); }}
+            className="text-xs font-medium text-gray-400 hover:text-indigo-500 transition-colors"
+          >
+            ← Revise draft
+          </button>
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
 interface Props {
   result: AssignmentAnalysis;
   isMock: boolean;
@@ -342,6 +531,9 @@ export default function AssignmentResultView({
       >
         <BulletList items={result.commonMistakes} variant="warning" />
       </SectionCard>
+
+      {/* Draft Feedback — Pro */}
+      <DraftFeedbackSection result={result} isPro={isPro} onUpgrade={onUpgrade} />
 
       {/* Rubric notes */}
       {result.rubricNotes.length > 0 && (

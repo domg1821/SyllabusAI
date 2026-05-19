@@ -26,7 +26,7 @@ const jsonLd = {
     "@type": "Offer",
     price: "0",
     priceCurrency: "USD",
-    description: "Free plan available. Pro plan at $9.99/month.",
+    description: "Free plan available. Pro plan at $5/month or $45/year.",
   },
   featureList: [
     "Syllabus analysis and deadline extraction",

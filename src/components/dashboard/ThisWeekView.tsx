@@ -1,6 +1,7 @@
 "use client";
 
 import { SavedClass, DeadlineItem, StudyTask, ItemType } from "@/lib/types";
+import { exportToIcs } from "@/lib/icsExport";
 
 interface Props {
   classes: SavedClass[];
@@ -300,7 +301,12 @@ export default function ThisWeekView({
   }
   upcomingDeadlines.sort((a, b) => (a.daysLeft ?? 999) - (b.daysLeft ?? 999));
 
-  // ── Panic mode ──
+  // ── Due today (any type, not completed) ──
+  const dueTodayItems = dayData
+    .flatMap((d) => d.deadlines)
+    .filter((r) => r.daysLeft === 0 && !r.item.completed);
+
+  // ── Panic mode (exam/project in ≤2 days) ──
   const panicItem = dayData
     .flatMap((d) => d.deadlines)
     .filter((r) => r.daysLeft <= 2 && (r.item.type === "exam" || r.item.type === "project"))[0] ?? null;
@@ -316,6 +322,39 @@ export default function ThisWeekView({
 
   return (
     <div className="space-y-6">
+      {/* ── Due today banner ── */}
+      {dueTodayItems.length > 0 && (
+        <div className="flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3.5 sm:px-5">
+          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100">
+            <svg className="h-4 w-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-orange-900">
+              {dueTodayItems.length === 1
+                ? "1 item due today"
+                : `${dueTodayItems.length} items due today`}
+            </p>
+            <p className="mt-0.5 text-xs text-orange-700 leading-relaxed">
+              {dueTodayItems.slice(0, 2).map((r) => r.item.title).join(" · ")}
+              {dueTodayItems.length > 2 ? ` · +${dueTodayItems.length - 2} more` : ""}
+            </p>
+          </div>
+          <button
+            className="shrink-0 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-500 transition-colors"
+            onClick={() => {
+              const today = new Date();
+              const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+              const todayName = dayNames[today.getDay()].toLowerCase();
+              document.getElementById(`tw-day-${todayName}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          >
+            View
+          </button>
+        </div>
+      )}
+
       {/* ── Panic banner ── */}
       {panicItem && onGoToPractice && (
         <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-4 sm:px-5">
@@ -343,8 +382,34 @@ export default function ThisWeekView({
 
       {/* ── Header ── */}
       <div>
-        <p className="text-xs font-medium text-indigo-600">{todayFormatted}</p>
-        <h1 className="mt-0.5 text-2xl font-extrabold tracking-tight text-gray-900">This Week</h1>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium text-indigo-600">{todayFormatted}</p>
+            <h1 className="mt-0.5 text-2xl font-extrabold tracking-tight text-gray-900">This Week</h1>
+          </div>
+          <button
+            onClick={() => {
+              const ics = exportToIcs(classes);
+              const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "syllabusai-deadlines.ics";
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }}
+            title="Export all deadlines to Google Calendar / Apple Calendar"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+            </svg>
+            <span className="hidden sm:inline">Export to Calendar</span>
+            <span className="sm:hidden">Export</span>
+          </button>
+        </div>
 
         {/* Study task progress */}
         {totalTaskCount > 0 && (

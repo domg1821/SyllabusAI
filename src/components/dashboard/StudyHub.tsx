@@ -7,6 +7,7 @@ import { HISTORY_KEY } from "@/lib/usePracticeTests";
 import TeachBackMode from "./TeachBackMode";
 import MemoryMapMode from "./MemoryMapMode";
 import ExamStyleMode from "./ExamStyleMode";
+import TutorChatMode from "./TutorChatMode";
 
 type StudyView = "courses" | "hub";
 type ExamQuestionType = "multiple_choice" | "short_answer" | "essay";
@@ -25,11 +26,13 @@ interface Recommendation {
 
 interface Props {
   classes: SavedClass[];
+  isPro?: boolean;
   onOpenPracticeTest: (topic: string) => void;
   onOpenFlashcards: (groupName: string, cls: SavedClass) => void;
   onOpenExplainer: (concept: string, cls: SavedClass) => void;
   onOpenCram: (item: DeadlineItem, cls: SavedClass) => void;
   onAddNew: () => void;
+  onUpgrade?: () => void;
 }
 
 function getDaysUntil(dueDate: string): number | null {
@@ -572,6 +575,7 @@ function ExamCard({
 
 function CourseStudyHub({
   cls,
+  isPro,
   onBack,
   onOpenPracticeTest,
   onOpenFlashcards,
@@ -580,8 +584,11 @@ function CourseStudyHub({
   onTeachBack,
   onMemoryMap,
   onExamStyle,
+  onOpenTutor,
+  onUpgrade,
 }: {
   cls: SavedClass;
+  isPro?: boolean;
   onBack: () => void;
   onOpenPracticeTest: (topic: string) => void;
   onOpenFlashcards: (groupName: string, cls: SavedClass) => void;
@@ -590,6 +597,8 @@ function CourseStudyHub({
   onTeachBack: (topic: string) => void;
   onMemoryMap: (topic: string) => void;
   onExamStyle: (topic: string, type: ExamQuestionType) => void;
+  onOpenTutor: () => void;
+  onUpgrade?: () => void;
 }) {
   const upcomingExams = cls.items
     .filter((i) => i.type === "exam" && !i.completed)
@@ -610,13 +619,32 @@ function CourseStudyHub({
           </svg>
           Back to courses
         </button>
-        <div className="flex items-center gap-3">
-          {cls.code && (
-            <span className="rounded-full bg-indigo-50 dark:bg-indigo-950 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-100 dark:ring-indigo-900">
-              {cls.code}
-            </span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {cls.code && (
+              <span className="shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-950 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-100 dark:ring-indigo-900">
+                {cls.code}
+              </span>
+            )}
+            <h2 className="text-xl font-extrabold text-gray-900 dark:text-slate-100 truncate">{cls.name}</h2>
+          </div>
+          {isPro ? (
+            <button
+              onClick={onOpenTutor}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-violet-200 dark:border-violet-900 bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-950/30 dark:to-indigo-950/30 px-3 py-2 text-xs font-semibold text-violet-700 dark:text-violet-300 hover:from-violet-100 hover:to-indigo-100 dark:hover:from-violet-950/50 dark:hover:to-indigo-950/50 transition-all shadow-sm"
+            >
+              🧑‍🏫 <span className="hidden sm:inline">AI</span> Tutor
+            </button>
+          ) : (
+            <button
+              onClick={onUpgrade}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-semibold text-gray-500 dark:text-slate-400 hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+              title="Upgrade to Pro to unlock AI Tutor"
+            >
+              🧑‍🏫 <span className="hidden sm:inline">AI</span> Tutor
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">Pro</span>
+            </button>
           )}
-          <h2 className="text-xl font-extrabold text-gray-900 dark:text-slate-100">{cls.name}</h2>
         </div>
       </div>
 
@@ -706,17 +734,20 @@ function CourseStudyHub({
 
 export default function StudyHub({
   classes,
+  isPro,
   onOpenPracticeTest,
   onOpenFlashcards,
   onOpenExplainer,
   onOpenCram,
   onAddNew,
+  onUpgrade,
 }: Props) {
   const [view, setView] = useState<StudyView>("courses");
   const [selectedCls, setSelectedCls] = useState<SavedClass | null>(null);
   const [teachBackSession, setTeachBackSession] = useState<TeachBackSession | null>(null);
   const [memoryMapSession, setMemoryMapSession] = useState<MemoryMapSession | null>(null);
   const [examStyleSession, setExamStyleSession] = useState<ExamStyleSession | null>(null);
+  const [tutorOpen, setTutorOpen] = useState(false);
 
   function openCourseHub(cls: SavedClass) {
     setSelectedCls(cls);
@@ -728,6 +759,7 @@ export default function StudyHub({
       return (
         <CourseStudyHub
           cls={selectedCls}
+          isPro={isPro}
           onBack={() => { setView("courses"); setSelectedCls(null); }}
           onOpenPracticeTest={onOpenPracticeTest}
           onOpenFlashcards={onOpenFlashcards}
@@ -736,6 +768,8 @@ export default function StudyHub({
           onTeachBack={(topic) => setTeachBackSession({ topic, cls: selectedCls })}
           onMemoryMap={(topic) => setMemoryMapSession({ topic, cls: selectedCls })}
           onExamStyle={(topic, examType) => setExamStyleSession({ topic, cls: selectedCls, examType })}
+          onOpenTutor={() => setTutorOpen(true)}
+          onUpgrade={onUpgrade}
         />
       );
     }
@@ -820,6 +854,13 @@ export default function StudyHub({
           cls={examStyleSession.cls}
           examType={examStyleSession.examType}
           onClose={() => setExamStyleSession(null)}
+        />
+      )}
+
+      {tutorOpen && selectedCls && (
+        <TutorChatMode
+          cls={selectedCls}
+          onClose={() => setTutorOpen(false)}
         />
       )}
     </>

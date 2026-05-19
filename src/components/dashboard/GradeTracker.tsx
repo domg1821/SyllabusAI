@@ -25,30 +25,75 @@ const TYPE_LABELS: Record<ItemType, string> = {
 
 const TYPE_ORDER: ItemType[] = ["exam", "project", "quiz", "assignment"];
 
+type CategoryWeights = Partial<Record<ItemType, number>>;
+
 export default function GradeTracker({ items, grades, onSetGrade, onRemoveGrade }: Props) {
   const [editing, setEditing] = useState<string | null>(null);
   const [earnedInput, setEarnedInput] = useState("");
   const [maxInput, setMaxInput] = useState("");
   const [targetLabel, setTargetLabel] = useState("B");
+  const [weightMode, setWeightMode] = useState(false);
+  const [weights, setWeights] = useState<CategoryWeights>({
+    exam: 40, project: 25, quiz: 15, assignment: 20,
+  });
 
   const gradeMap = new Map(grades.map((g) => [g.itemId, g]));
-
-  // Current grade: sum of earned / sum of max for graded items
   const gradedItems = grades.filter((g) => g.max > 0);
+
+  // ── Raw (point-based) calculations ──
   const totalEarned = gradedItems.reduce((s, g) => s + g.earned, 0);
   const totalMax = gradedItems.reduce((s, g) => s + g.max, 0);
-  const currentPct = totalMax > 0 ? (totalEarned / totalMax) * 100 : null;
+  const rawCurrentPct = totalMax > 0 ? (totalEarned / totalMax) * 100 : null;
 
-  // Projected final: (earned + remaining max) / total possible max from all items with points
   const pointItems = items.filter((i) => i.points && i.points > 0);
   const totalPossible = pointItems.reduce((s, i) => s + (i.points ?? 0), 0);
   const ungradedPoints = pointItems
     .filter((i) => !gradeMap.has(i.id))
     .reduce((s, i) => s + (i.points ?? 0), 0);
-  const projectedPct =
+  const rawProjectedPct =
     totalPossible > 0 && totalMax > 0
       ? ((totalEarned + ungradedPoints) / totalPossible) * 100
       : null;
+
+  // ── Weighted category calculations ──
+  function categoryPct(type: ItemType): number | null {
+    const typeGrades = gradedItems.filter((g) => {
+      const item = items.find((i) => i.id === g.itemId);
+      return item?.type === type;
+    });
+    if (!typeGrades.length) return null;
+    const earned = typeGrades.reduce((s, g) => s + g.earned, 0);
+    const max = typeGrades.reduce((s, g) => s + g.max, 0);
+    return max > 0 ? (earned / max) * 100 : null;
+  }
+
+  function calcWeightedGrade(): number | null {
+    const totalWeight = TYPE_ORDER.reduce((s, t) => s + (weights[t] ?? 0), 0);
+    if (!totalWeight) return null;
+    let earned = 0;
+    let appliedWeight = 0;
+    for (const type of TYPE_ORDER) {
+      const pct = categoryPct(type);
+      const w = weights[type] ?? 0;
+      if (pct !== null && w > 0) {
+        earned += (pct / 100) * w;
+        appliedWeight += w;
+      }
+    }
+    if (!appliedWeight) return null;
+    return (earned / appliedWeight) * 100;
+  }
+
+  const weightedCurrentPct = weightMode ? calcWeightedGrade() : null;
+  const currentPct = weightMode ? weightedCurrentPct : rawCurrentPct;
+  const projectedPct = weightMode ? null : rawProjectedPct; // weighted projected is complex — skip for now
+
+  function setWeight(type: ItemType, val: string) {
+    const n = parseFloat(val);
+    setWeights((prev) => ({ ...prev, [type]: isNaN(n) ? 0 : Math.min(100, Math.max(0, n)) }));
+  }
+
+  const totalWeightPct = TYPE_ORDER.reduce((s, t) => s + (weights[t] ?? 0), 0);
 
   function letterGrade(pct: number) {
     if (pct >= 93) return "A";
@@ -110,12 +155,62 @@ export default function GradeTracker({ items, grades, onSetGrade, onRemoveGrade 
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex items-center gap-2">
-        <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
-        </svg>
-        <h3 className="text-sm font-semibold text-gray-800">Grade Tracker</h3>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+          </svg>
+          <h3 className="text-sm font-semibold text-gray-800">Grade Tracker</h3>
+        </div>
+        <button
+          onClick={() => setWeightMode((v) => !v)}
+          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-semibold transition-colors ${
+            weightMode
+              ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+              : "border-gray-200 bg-gray-50 text-gray-500 hover:border-indigo-200 hover:text-indigo-600"
+          }`}
+          title="Toggle category weights mode"
+        >
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+          </svg>
+          {weightMode ? "Weighted ✓" : "Set Weights"}
+        </button>
       </div>
+
+      {/* Category weights panel */}
+      {weightMode && (
+        <div className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/50 px-4 py-3">
+          <p className="mb-2.5 text-[10px] font-bold uppercase tracking-wider text-indigo-600">
+            Category Weights (must add up to 100%)
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {TYPE_ORDER.map((type) => (
+              <div key={type}>
+                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                  {TYPE_LABELS[type]}
+                </label>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={weights[type] ?? 0}
+                    onChange={(e) => setWeight(type, e.target.value)}
+                    className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-700 focus:border-indigo-400 focus:outline-none"
+                  />
+                  <span className="text-xs text-gray-400">%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className={`mt-2 text-[10px] font-semibold ${
+            totalWeightPct === 100 ? "text-emerald-600" : "text-amber-600"
+          }`}>
+            Total: {totalWeightPct}% {totalWeightPct === 100 ? "✓" : "(should be 100%)"}
+          </p>
+        </div>
+      )}
 
       {/* Summary cards */}
       {gradedItems.length > 0 && currentPct !== null && (
