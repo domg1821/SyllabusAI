@@ -465,47 +465,25 @@ function ChapterCard({
         </p>
       </div>
 
-      <div className="space-y-1.5">
-        <div className="flex flex-wrap gap-1.5">
+      <div className="grid grid-cols-3 gap-2">
+        {([
+          { emoji: "📝", label: "Practice", sub: "Test yourself", color: "bg-indigo-50 dark:bg-indigo-950/60 border-indigo-100 dark:border-indigo-900 hover:bg-indigo-100 dark:hover:bg-indigo-950 text-indigo-700 dark:text-indigo-300", onClick: onPractice },
+          { emoji: "🃏", label: "Flashcards", sub: "Key terms", color: "bg-violet-50 dark:bg-violet-950/60 border-violet-100 dark:border-violet-900 hover:bg-violet-100 dark:hover:bg-violet-950 text-violet-700 dark:text-violet-300", onClick: onFlashcards },
+          { emoji: "💡", label: "Explain", sub: "Break it down", color: "bg-sky-50 dark:bg-sky-950/60 border-sky-100 dark:border-sky-900 hover:bg-sky-100 dark:hover:bg-sky-950 text-sky-700 dark:text-sky-300", onClick: onExplain },
+          { emoji: "🧑‍🏫", label: "Teach It", sub: "Feynman method", color: "bg-orange-50 dark:bg-orange-950/60 border-orange-100 dark:border-orange-900 hover:bg-orange-100 dark:hover:bg-orange-950 text-orange-700 dark:text-orange-300", onClick: onTeachBack },
+          { emoji: "🗺️", label: "Memory Map", sub: "Visual concepts", color: "bg-purple-50 dark:bg-purple-950/60 border-purple-100 dark:border-purple-900 hover:bg-purple-100 dark:hover:bg-purple-950 text-purple-700 dark:text-purple-300", onClick: onMemoryMap },
+          { emoji: "📋", label: "Exam Style", sub: "Timed questions", color: "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-100 dark:border-emerald-900 hover:bg-emerald-100 dark:hover:bg-emerald-950 text-emerald-700 dark:text-emerald-300", onClick: onExamStyle },
+        ] as const).map(({ emoji, label, sub, color, onClick }) => (
           <button
-            onClick={onPractice}
-            className="flex items-center gap-1 rounded-lg border border-indigo-200 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-950/50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-950 transition-colors"
+            key={label}
+            onClick={onClick}
+            className={`flex flex-col items-center gap-1 rounded-xl border p-2.5 text-center transition-all active:scale-95 ${color}`}
           >
-            📝 Practice
+            <span className="text-xl leading-none">{emoji}</span>
+            <span className="text-xs font-bold leading-tight">{label}</span>
+            <span className="text-[10px] leading-tight opacity-60">{sub}</span>
           </button>
-          <button
-            onClick={onFlashcards}
-            className="flex items-center gap-1 rounded-lg border border-violet-200 dark:border-violet-900 bg-violet-50 dark:bg-violet-950/50 px-2.5 py-1.5 text-xs font-semibold text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-950 transition-colors"
-          >
-            🃏 Flashcards
-          </button>
-          <button
-            onClick={onExplain}
-            className="flex items-center gap-1 rounded-lg border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/50 px-2.5 py-1.5 text-xs font-semibold text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-950 transition-colors"
-          >
-            💡 Explain
-          </button>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            onClick={onTeachBack}
-            className="flex items-center gap-1 rounded-lg border border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-950/50 px-2.5 py-1.5 text-xs font-semibold text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-950 transition-colors"
-          >
-            🧑‍🏫 Teach It
-          </button>
-          <button
-            onClick={onMemoryMap}
-            className="flex items-center gap-1 rounded-lg border border-purple-200 dark:border-purple-900 bg-purple-50 dark:bg-purple-950/50 px-2.5 py-1.5 text-xs font-semibold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950 transition-colors"
-          >
-            🗺️ Memory Map
-          </button>
-          <button
-            onClick={onExamStyle}
-            className="flex items-center gap-1 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950 transition-colors"
-          >
-            📋 Exam Style
-          </button>
-        </div>
+        ))}
       </div>
     </div>
   );
