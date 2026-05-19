@@ -37,19 +37,42 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new Response("Not authenticated.", { status: 401 });
 
-  // Use admin client for the Pro check to bypass any RLS / session issues.
-  // We already verified the user identity above via getUser().
-  const admin = createAdminClient();
-  let { data: profile } = await admin
-    .from("profiles").select("is_pro").eq("id", user.id).single();
+  // Check Pro using admin client first (bypasses RLS). Fall back to regular
+  // client (uses user's own session + RLS) if admin key is not configured.
+  let isPro = false;
+  const serviceKeyConfigured = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // Auto-create profile row for users who pre-date the handle_new_user trigger.
-  if (!profile) {
-    await admin.from("profiles").upsert({ id: user.id, is_pro: false, analysis_count: 0 });
-    profile = { is_pro: false };
+  if (serviceKeyConfigured) {
+    const admin = createAdminClient();
+    const { data: profile, error } = await admin
+      .from("profiles").select("is_pro").eq("id", user.id).single();
+    if (error) {
+      console.error("[tutor] admin profile lookup failed:", error.message);
+    }
+    if (profile) {
+      isPro = profile.is_pro ?? false;
+    } else {
+      // No row yet — fall through to regular client check below
+      console.warn("[tutor] admin found no profile row for user:", user.id);
+    }
   }
 
-  if (!profile?.is_pro) return new Response("Pro required.", { status: 403 });
+  // Fallback: use the user's own authenticated Supabase session
+  if (!isPro) {
+    const { data: profile, error } = await supabase
+      .from("profiles").select("is_pro").eq("id", user.id).single();
+    if (error) {
+      console.error("[tutor] regular profile lookup failed:", error.message);
+    }
+    isPro = profile?.is_pro ?? false;
+    if (!serviceKeyConfigured) {
+      console.warn("[tutor] SUPABASE_SERVICE_ROLE_KEY not set — using anon client for Pro check");
+    }
+  }
+
+  console.log(`[tutor] user=${user.id} is_pro=${isPro} serviceKey=${serviceKeyConfigured}`);
+
+  if (!isPro) return new Response("Pro required.", { status: 403 });
 
   const {
     messages,
