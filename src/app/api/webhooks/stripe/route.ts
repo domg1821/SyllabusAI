@@ -43,13 +43,27 @@ export async function POST(req: NextRequest) {
           : (session.customer as Stripe.Customer | null)?.id ?? null;
 
       if (userId) {
-        const { error } = await supabase.from("profiles").upsert({
-          id: userId,
-          is_pro: true,
-          stripe_customer_id: customerId,
-        });
-        if (error)
-          console.error("[webhook/stripe] checkout.session.completed upsert failed:", error);
+        // Try update first (won't disturb other columns), fall back to upsert.
+        const { data: updated, error: updateErr } = await supabase
+          .from("profiles")
+          .update({ is_pro: true, stripe_customer_id: customerId })
+          .eq("id", userId)
+          .select("id")
+          .maybeSingle();
+
+        if (updateErr) {
+          console.error("[webhook/stripe] checkout.session.completed update failed:", updateErr);
+        }
+
+        if (!updated) {
+          const { error: upsertErr } = await supabase.from("profiles").upsert({
+            id: userId,
+            is_pro: true,
+            stripe_customer_id: customerId,
+          });
+          if (upsertErr)
+            console.error("[webhook/stripe] checkout.session.completed upsert failed:", upsertErr);
+        }
       } else {
         console.warn("[webhook/stripe] checkout.session.completed missing user_id in metadata");
       }

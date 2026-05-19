@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
 
@@ -36,8 +37,18 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new Response("Not authenticated.", { status: 401 });
 
-  const { data: profile } = await supabase
+  // Use admin client for the Pro check to bypass any RLS / session issues.
+  // We already verified the user identity above via getUser().
+  const admin = createAdminClient();
+  let { data: profile } = await admin
     .from("profiles").select("is_pro").eq("id", user.id).single();
+
+  // Auto-create profile row for users who pre-date the handle_new_user trigger.
+  if (!profile) {
+    await admin.from("profiles").upsert({ id: user.id, is_pro: false, analysis_count: 0 });
+    profile = { is_pro: false };
+  }
+
   if (!profile?.is_pro) return new Response("Pro required.", { status: 403 });
 
   const {

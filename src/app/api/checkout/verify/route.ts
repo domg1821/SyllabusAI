@@ -39,11 +39,28 @@ export async function GET(req: NextRequest) {
 
       if (userId) {
         const supabase = createAdminClient();
-        await supabase.from("profiles").upsert({
-          id: userId,
-          is_pro: true,
-          stripe_customer_id: customerId,
-        });
+
+        // First try to update existing row (safe — won't touch other columns).
+        const { data: updated, error: updateErr } = await supabase
+          .from("profiles")
+          .update({ is_pro: true, stripe_customer_id: customerId })
+          .eq("id", userId)
+          .select("id")
+          .maybeSingle();
+
+        if (updateErr) {
+          console.error("[checkout/verify] profile update failed:", updateErr.message);
+        }
+
+        // If no row existed yet, create one.
+        if (!updated) {
+          const { error: insertErr } = await supabase
+            .from("profiles")
+            .upsert({ id: userId, is_pro: true, stripe_customer_id: customerId });
+          if (insertErr) {
+            console.error("[checkout/verify] profile upsert failed:", insertErr.message);
+          }
+        }
       }
     }
 
