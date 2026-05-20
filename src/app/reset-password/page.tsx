@@ -17,35 +17,22 @@ function ResetPasswordForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Read token from URL — set to "form" immediately if token is present.
+  // We deliberately do NOT call verifyOtp on page load so that email
+  // scanners (e.g. Gmail) can't consume the token before the user clicks.
   useEffect(() => {
-    async function verify() {
+    const tokenHash = searchParams.get("token_hash");
+    const type = searchParams.get("type");
+    if (tokenHash && type === "recovery") {
+      setStatus("form");
+    } else {
+      // No token in URL — check for an existing recovery session
       const supabase = createClient();
-
-      // Token is verified server-side in /auth/callback before landing here.
-      // Just confirm we have an active recovery session.
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setStatus("form");
-        return;
-      }
-
-      // Listen for PASSWORD_RECOVERY event (fires when session is established)
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
-          setStatus("form");
-        }
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setStatus(session ? "form" : "invalid");
       });
-
-      // If nothing fires after 2s, the link is invalid/expired
-      setTimeout(() => {
-        setStatus((s) => s === "verifying" ? "invalid" : s);
-      }, 2000);
-
-      return () => subscription.unsubscribe();
     }
-
-    verify();
-  }, []);
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,6 +49,23 @@ function ResetPasswordForm() {
 
     setLoading(true);
     const supabase = createClient();
+
+    // Verify the token now (at submit time, not on page load)
+    const tokenHash = searchParams.get("token_hash");
+    const type = searchParams.get("type");
+    if (tokenHash && type === "recovery") {
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: "recovery",
+      });
+      if (verifyError) {
+        setError("This reset link has expired. Please request a new one.");
+        setLoading(false);
+        setStatus("invalid");
+        return;
+      }
+    }
+
     const { error: updateError } = await supabase.auth.updateUser({ password });
 
     if (updateError) {
