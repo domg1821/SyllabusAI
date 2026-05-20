@@ -32,7 +32,8 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  const authPages = ["/sign-in", "/sign-up", "/forgot-password", "/reset-password"];
+  // /reset-password is excluded — logged-in users need to reach it to change their password
+  const authPages = ["/sign-in", "/sign-up", "/forgot-password"];
   const protectedPrefixes = ["/dashboard", "/settings", "/account"];
 
   // Redirect authenticated users away from auth pages
