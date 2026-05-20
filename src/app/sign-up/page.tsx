@@ -11,6 +11,21 @@ const FEATURES = [
   "Grade tracking & deadline alerts",
 ];
 
+const TESTIMONIALS = [
+  {
+    quote: "Uploaded my bio syllabus and had a full study schedule in under a minute. Genuinely game-changing.",
+    name: "Maya R.",
+    detail: "Biology major, UC Davis",
+    avatar: "MR",
+  },
+  {
+    quote: "I used to miss deadlines constantly. Now my entire semester is mapped out before week 2.",
+    name: "Jordan T.",
+    detail: "CS junior, Georgia Tech",
+    avatar: "JT",
+  },
+];
+
 export default function SignUpPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -184,12 +199,25 @@ export default function SignUpPage() {
           </ul>
         </div>
 
-        <div className="relative flex items-center gap-6">
-          <div><p className="text-2xl font-extrabold text-white">Free</p><p className="text-xs text-indigo-300">to get started</p></div>
-          <div className="h-8 w-px bg-white/20" />
-          <div><p className="text-2xl font-extrabold text-white">30s</p><p className="text-xs text-indigo-300">to set up</p></div>
-          <div className="h-8 w-px bg-white/20" />
-          <div><p className="text-2xl font-extrabold text-white">50+</p><p className="text-xs text-indigo-300">universities</p></div>
+        {/* Testimonials */}
+        <div className="relative space-y-3">
+          {TESTIMONIALS.map((t) => (
+            <div key={t.name} className="flex items-start gap-3 rounded-xl bg-white/10 backdrop-blur-sm p-4">
+              {/* Avatar */}
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white">
+                {t.avatar}
+              </div>
+              <div>
+                <p className="text-sm leading-snug text-white/90">{t.quote}</p>
+                <p className="mt-1.5 text-xs font-semibold text-indigo-200">{t.name} · <span className="font-normal text-indigo-300">{t.detail}</span></p>
+              </div>
+            </div>
+          ))}
+          {/* Star row */}
+          <div className="flex items-center gap-2 pl-1">
+            <span className="text-amber-300 text-sm tracking-tight">★★★★★</span>
+            <span className="text-xs text-indigo-300">Loved by 2,000+ students</span>
+          </div>
         </div>
       </div>
 

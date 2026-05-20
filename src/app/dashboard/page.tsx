@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   AnalysisMode,
   AssignmentAnalysis,
@@ -34,6 +34,7 @@ import CramMode from "@/components/dashboard/CramMode";
 import ExplainerPanel from "@/components/dashboard/ExplainerPanel";
 import StudyHub from "@/components/dashboard/StudyHub";
 import { getWeeklyStudyMinutes } from "@/lib/useStudySessions";
+import confetti from "canvas-confetti";
 
 // ─── Sample content ────────────────────────────────────────────────────────────
 
@@ -104,21 +105,47 @@ function CoursesLoadingSkeleton() {
 }
 
 function EmptyCoursesCard({ onAnalyze }: { onAnalyze: () => void }) {
+  const steps = [
+    { icon: "📄", text: "Paste or upload your syllabus PDF" },
+    { icon: "⚡", text: "AI extracts every deadline instantly" },
+    { icon: "📅", text: "Get a personalised study schedule" },
+  ];
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 py-16 px-6 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950 text-3xl">
+    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-indigo-100 dark:border-indigo-900/60 bg-gradient-to-b from-white to-indigo-50/40 dark:from-slate-800 dark:to-indigo-950/20 py-14 px-6 text-center">
+      {/* Icon */}
+      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 text-3xl shadow-sm">
         📚
       </div>
-      <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">No courses yet</h2>
-      <p className="mt-2 max-w-xs text-sm text-gray-500 dark:text-slate-400">
-        Analyze your first syllabus to extract every deadline and build a personalized study plan.
+      <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">Start your semester off right</h2>
+      <p className="mt-1.5 max-w-xs text-sm text-gray-500 dark:text-slate-400">
+        Upload any syllabus and we&apos;ll build your entire study plan in seconds.
       </p>
+
+      {/* Step hints */}
+      <div className="mt-6 flex flex-col sm:flex-row items-center gap-3 sm:gap-0">
+        {steps.map((s, i) => (
+          <div key={i} className="flex sm:flex-col items-center gap-2 sm:gap-1.5 sm:w-36">
+            <span className="text-xl">{s.icon}</span>
+            <span className="text-xs text-gray-500 dark:text-slate-400 leading-tight">{s.text}</span>
+            {i < steps.length - 1 && (
+              <svg className="hidden sm:block absolute text-indigo-200 dark:text-indigo-800 h-4 w-4 translate-x-[72px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
+            )}
+          </div>
+        ))}
+      </div>
+
       <button
         onClick={onAnalyze}
-        className="mt-6 flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 active:scale-[0.99] transition-all"
+        className="mt-7 btn-shimmer flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-7 py-3 text-sm font-semibold text-white shadow-md shadow-indigo-100 dark:shadow-indigo-950 hover:opacity-90 active:scale-[0.99] transition-all"
       >
-        Analyze My First Syllabus →
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+        </svg>
+        Analyze My First Syllabus
       </button>
+      <p className="mt-3 text-xs text-gray-400 dark:text-slate-500">Free · No credit card · Takes 30 seconds</p>
     </div>
   );
 }
@@ -597,24 +624,22 @@ export default function DashboardPage() {
 
     if (checkout === "success") {
       setCheckoutBanner("success");
+      // Fire confetti 🎉
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.55 }, colors: ["#6366f1", "#8b5cf6", "#a78bfa", "#ffffff"] });
+      setTimeout(() => confetti({ particleCount: 60, spread: 100, origin: { y: 0.4 }, colors: ["#6366f1", "#ec4899", "#f59e0b"] }), 350);
+
       // Verify the session with Stripe and activate Pro in Supabase.
-      // This is the fast path — the webhook is the durable backup.
       const sessionId = params.get("session_id");
       if (sessionId) {
         fetch(`/api/checkout/verify?session_id=${encodeURIComponent(sessionId)}`)
           .then((r) => r.json())
           .then((json) => {
             if (json.paid) {
-              // Immediately ungate — no DB round-trip needed, Stripe confirmed payment.
-              // refreshPro() follows as a DB confirmation; on error it keeps the true value.
               activatePro();
               refreshPro();
             }
           })
-          .catch(() => {
-            // Silently ignore — user will see Pro status on next page load
-            // once the Stripe webhook has fired.
-          });
+          .catch(() => {});
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -622,6 +647,22 @@ export default function DashboardPage() {
 
   const [tab, setTab] = useState<DashboardTab>("week");
   const [analyzeMode, setAnalyzeMode] = useState<"syllabus" | "assignment">("syllabus");
+
+  // ── Cmd+K / Ctrl+K cycle through tabs ──
+  useEffect(() => {
+    const TAB_ORDER: DashboardTab[] = ["week", "courses", "analyze", "practice", "study"];
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setTab((current) => {
+          const idx = TAB_ORDER.indexOf(current);
+          return TAB_ORDER[(idx + 1) % TAB_ORDER.length];
+        });
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Syllabus mode state
   const [syllabusText, setSyllabusText] = useState("");

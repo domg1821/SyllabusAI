@@ -307,9 +307,24 @@ export default function UpgradeModal({ open, onClose, defaultPeriod = "monthly" 
               `Get Pro — $${PRO_PRICE_MONTHLY}/month`
             )}
           </button>
-          <p className="mt-3 text-center text-xs text-gray-400">
-            Secure checkout via Stripe · 30-day money-back guarantee
-          </p>
+          {/* Trust row */}
+          <div className="mt-3 flex items-center justify-center gap-3">
+            {/* Stripe badge */}
+            <a
+              href="https://stripe.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-500 hover:border-gray-300 transition-colors"
+              aria-label="Payments secured by Stripe"
+            >
+              <svg className="h-3.5 w-3.5 text-[#635bff]" viewBox="0 0 60 25" fill="currentColor" aria-hidden>
+                <path d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a8.33 8.33 0 0 1-4.56 1.1c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 2.9 5.96 7.24l-.06 1.74zm-5.92-5.62c-1.03 0-2.17.73-2.17 2.58h4.25c0-1.85-1.07-2.58-2.08-2.58zM40.95 20.3c-1.44 0-2.32-.6-2.9-1.04l-.02 4.63-4.12.87V5.57h3.76l.08 1.02a4.7 4.7 0 0 1 3.23-1.29c2.9 0 5.62 2.6 5.62 7.4 0 5.23-2.7 7.6-5.65 7.6zM40 8.95c-.95 0-1.54.34-1.97.81l.02 6.12c.4.44.98.78 1.95.78 1.52 0 2.54-1.65 2.54-3.87 0-2.15-1.04-3.84-2.54-3.84zM28.24 5.57h4.13v14.44h-4.13V5.57zm0-4.7L32.37 0v3.36l-4.13.88V.87zm-4.32 9.35v9.79H19.8V5.57h3.7l.12 1.22c1-1.77 2.96-1.49 3.57-1.22v3.79c-.59-.28-2.67-.41-3.27 1.06zm-8.55 4.72c0 2.43 2.6 1.68 3.12 1.46v3.36c-.55.3-1.54.54-2.89.54a4.15 4.15 0 0 1-4.27-4.24l.01-13.17 4.02-.86v3.54h3.14V9.1h-3.13v5.84zm-4.92 2.45c-.42 1.84-2.12 2.76-4.4 2.76-2.71 0-4.74-1.3-4.74-4.51V5.57h4.12V18c0 1.08.81 1.56 1.63 1.56.85 0 1.57-.48 1.57-1.56V5.57h4.12v14.44h-3.71l-.59-2.02z"/>
+              </svg>
+              <span>Secured by Stripe</span>
+            </a>
+            <span className="text-gray-200">·</span>
+            <span className="text-[11px] text-gray-400">30-day money-back guarantee</span>
+          </div>
         </div>
       </div>
     </div>
